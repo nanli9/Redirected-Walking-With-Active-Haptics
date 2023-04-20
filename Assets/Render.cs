@@ -16,7 +16,7 @@ public class Render : MonoBehaviour
     public GameObject VisualWall;
     public GameObject Floor;
     public GameObject SurveyScreen;
-    public float radius = 20f;
+    public float init_radius = 22f;
     public float init_distance = 0.42f;
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
@@ -30,9 +30,15 @@ public class Render : MonoBehaviour
     private UdpClient udpClient;
     private IPEndPoint remoteEndPoint;
 
+
+    private float min_radius_threshold;
+    private float max_radius_threshold;
+    private float radius;
+
     // Start is called before the first frame update
     void Start()
     {
+        ResetExperiment();
         udpClient = new UdpClient(localPort);
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
         Debug.Log("UDP server started");
@@ -45,7 +51,10 @@ public class Render : MonoBehaviour
         ApplyRadiusChange();
         TestingObjectsViewUpdate();
         VisualWall.SetActive(ViewVisualWall);
-        float handProjectionResult = handProjection();
+        SendServoPosition(handProjection());
+    }
+
+    private void SendServoPosition(float handProjectionResult) {
         int servoPosition = 105;
         if (WithServo) {
             if (handProjectionResult < 0.06f && handProjectionResult > 0f)
@@ -57,7 +66,6 @@ public class Render : MonoBehaviour
                 servoPosition = 75;
             }
         }
-        // print(servoPosition);
         byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
         udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
     }
@@ -137,7 +145,41 @@ public class Render : MonoBehaviour
         // SurveyScreen.SetActive(true);
     }
 
-    public void SurveyStraightness(bool answer) {
+    private void ResetExperiment() {
+        radius = init_radius;
+        min_radius_threshold = 0.0f;
+        max_radius_threshold = init_radius * 2f;
+    }
 
+    public void SurveyStraightness(int answer) {
+        switch (answer) {
+            case 1:
+                min_radius_threshold = radius;
+                radius += 0.30f * (max_radius_threshold - radius);
+                break;
+            case 2:
+                min_radius_threshold = radius;
+                radius += 0.15f * (max_radius_threshold - radius);
+                break;
+            case 3:
+                min_radius_threshold = radius;
+                radius += 0.07f * (max_radius_threshold - radius);
+                break;
+            case 5:
+                max_radius_threshold = radius;
+                radius -= 0.07f * (radius - min_radius_threshold);
+                break;
+            case 6:
+                max_radius_threshold = radius;
+                radius -= 0.15f * (radius - min_radius_threshold);
+                break;
+            case 7:
+                max_radius_threshold = radius;
+                radius -= 0.30f * (radius - min_radius_threshold);
+                break;
+            default: // case 4 end experiment
+                ResetExperiment();
+                break;
+        }
     }
 }
