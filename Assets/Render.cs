@@ -10,6 +10,7 @@ public class Render : MonoBehaviour
 
     public GameObject CenterEyeAnchor;
     public OVRHand LeftHand;
+    public OVRHand RightHand;
     public GameObject RealSphere;
     public GameObject VisualSphere;
     public GameObject RealWall;
@@ -47,6 +48,9 @@ public class Render : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
+
+        }
         SurveyScreenUpdate();
         ApplyRadiusChange();
         TestingObjectsViewUpdate();
