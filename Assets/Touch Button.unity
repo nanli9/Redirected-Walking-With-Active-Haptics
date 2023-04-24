@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44202968, g: 0.45022535, b: 0.47379774, a: 1}
+  m_IndirectSpecularColor: {r: 0.44202876, g: 0.45022064, b: 0.47379425, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1696,9 +1696,9 @@ MonoBehaviour:
   SurveyScreen: {fileID: 674279766}
   init_radius: 22
   init_distance: 0.42
-  step_meter: 1
+  step_meter: 5
   UseRenderPosition: 1
-  ViewTestingObjects: 1
+  ViewTestingObjects: 0
   ViewVisualWall: 1
   WithServo: 1
   remoteIpAddress: 192.168.4.1

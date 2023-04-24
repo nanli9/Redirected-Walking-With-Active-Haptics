@@ -64,9 +64,9 @@ public class Render : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
-
-        // }
+        if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
+            WithServo = !WithServo;
+        }
         position_record.Add(CenterEyeAnchor.transform.position);
         position_time_record.Add(Time.time);
         SurveyScreenUpdate();
@@ -77,15 +77,16 @@ public class Render : MonoBehaviour
     }
 
     private void SendServoPosition(float handProjectionResult) {
-        int servoPosition = 105;
+        int calibrate = 30;
+        int servoPosition = 125 + calibrate;
         if (WithServo) {
             if (handProjectionResult < 0.06f && handProjectionResult > 0f)
             {
-                servoPosition = Mathf.RoundToInt(Mathf.Lerp(95f, 75f, handProjectionResult / 0.06f));
+                servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, handProjectionResult / 0.06f)) + calibrate;
             }
             else if (handProjectionResult >= 0.04f)
             {
-                servoPosition = 75;
+                servoPosition = 85 + calibrate;
             }
         }
         byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
