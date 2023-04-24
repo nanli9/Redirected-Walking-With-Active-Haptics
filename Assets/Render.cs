@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections;
@@ -19,6 +20,7 @@ public class Render : MonoBehaviour
     public GameObject SurveyScreen;
     public float init_radius = 22f;
     public float init_distance = 0.42f;
+    public float step_meter = 5f;
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
     public bool ViewVisualWall = true;
@@ -36,9 +38,23 @@ public class Render : MonoBehaviour
     private float max_radius_threshold;
     private float radius;
 
+    private Vector3 step_start_position = new Vector3(0f,0f,0f);
+
+    private List<float> radius_record;
+    private List<float> radius_time_record;
+    private List<Vector3> position_record;
+    private List<float> position_time_record;
+
+    private float filename;
+
     // Start is called before the first frame update
     void Start()
     {
+        radius_record = new List<float>();
+        radius_time_record = new List<float>();
+        position_record = new List<Vector3>();
+        position_time_record = new List<float>();
+
         ResetExperiment();
         udpClient = new UdpClient(localPort);
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
@@ -48,9 +64,11 @@ public class Render : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
+        // if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
 
-        }
+        // }
+        position_record.Add(CenterEyeAnchor.transform.position);
+        position_time_record.Add(Time.time);
         SurveyScreenUpdate();
         ApplyRadiusChange();
         TestingObjectsViewUpdate();
@@ -91,6 +109,13 @@ public class Render : MonoBehaviour
         if (playerToWall.x < 0f) {                                      // cast it to (0, 2PI) System
             wallAngle += Mathf.PI * 2f;
         }
+
+        // if user walked for required distance for the step
+        // turn on the survery screen
+        if (Vector3.Distance(playerPosition, step_start_position) > step_meter) {
+            SurveyScreen.SetActive(true);
+        }
+
         // Apply wall shift
         Vector3 visualWallRight = Vector3.Cross(playerToWall.normalized, wallNormal);                   // get the shifting direction
         VisualWall.transform.position += visualWallRight * (1 - wallAngle) * (radius + init_distance);  // Apply Shift to Opposite Direction of Walking in circunstance scale
@@ -146,13 +171,17 @@ public class Render : MonoBehaviour
     private void SurveyScreenUpdate() {
         SurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
         SurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
-        // SurveyScreen.SetActive(true);
     }
 
     private void ResetExperiment() {
         radius = init_radius;
         min_radius_threshold = 0.0f;
         max_radius_threshold = init_radius * 2f;
+        step_start_position = CenterEyeAnchor.transform.position;
+        step_start_position.y = 0;
+        filename = Time.time;
+        radius_record.Add(radius);
+        radius_time_record.Add(Time.time);
     }
 
     public void SurveyStraightness(int answer) {
@@ -182,8 +211,37 @@ public class Render : MonoBehaviour
                 radius -= 0.30f * (radius - min_radius_threshold);
                 break;
             default: // case 4 end experiment
+                //store data and clear the record
+                // create a new csv file
+                string radius_path = Application.persistentDataPath + "/" + DateTime.Now + "_radius.csv";
+                string position_path = Application.persistentDataPath + "/" + DateTime.Now + "_position.csv";
+
+                // store radius and radius time data to radius_path csv file
+                StreamWriter radius_writer = new StreamWriter(radius_path, true);
+                for (int i = 0; i < radius_record.Count; i++) {
+                    radius_writer.WriteLine(radius_record[i] + "," + radius_time_record[i]);
+                }
+                radius_writer.Close();
+
+                // store position and position time data to position_path csv file
+                StreamWriter position_writer = new StreamWriter(position_path, true);
+                for (int i = 0; i < position_record.Count; i++) {
+                    position_writer.WriteLine(position_record[i] + "," + position_time_record[i]);
+                }
+                position_writer.Close();
+
+                // clear the record
+                radius_record.Clear();
+                radius_time_record.Clear();
+                position_record.Clear();
+                position_time_record.Clear();
+
                 ResetExperiment();
-                break;
+                return;
         }
+        step_start_position = CenterEyeAnchor.transform.position;
+        step_start_position.y = 0;
+        radius_record.Add(radius);
+        radius_time_record.Add(Time.time);
     }
 }
