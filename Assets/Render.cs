@@ -9,7 +9,7 @@ using TMPro;
 
 public class Render : MonoBehaviour
 {
-
+    public GameObject OVRCameraRig;
     public GameObject CenterEyeAnchor;
     public OVRHand LeftHand;
     public OVRHand RightHand;
@@ -51,7 +51,7 @@ public class Render : MonoBehaviour
     private List<Vector3> position_record;
     private List<float> position_time_record;
 
-    private string file_path;
+    private string participant_id;
     private bool servo_switched = false;
 
     // Start is called before the first frame update
@@ -65,7 +65,7 @@ public class Render : MonoBehaviour
         // WithServo = UnityEngine.Random.Range(0, 2) == 0;
         WithServo = true;
 
-        file_path = Application.persistentDataPath + "/" + DateTime.Now + ".csv";
+        participant_id = DateTime.Now.ToString("yyyy_MM_dd-HH_mm_ss");
 
         ResetExperiment();
         udpClient = new UdpClient(localPort);
@@ -198,6 +198,7 @@ public class Render : MonoBehaviour
         radius = init_radius;
         min_radius_threshold = 0.0f;
         max_radius_threshold = init_radius * 2f;
+        OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position;
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
         radius_record.Add(radius);
@@ -232,31 +233,29 @@ public class Render : MonoBehaviour
                 break;
             default: // case 4 end experiment
                 //store data and clear the record
-                StreamWriter writer = new StreamWriter(file_path, true);
-                writer.WriteLine(WithServo ? "servo_on" : "servo_off");
-                ResultScreen.text += (WithServo ? "servo_on" : "servo_off");
 
-                // store radius and radius time data to csv file
-                writer.WriteLine("Radius,RadiusTime, Position, PositionTime");
-                ResultScreen.text += "Radius,Time\n";
-                
-                for (int i = 0; i < Math.Max(radius_record.Count, position_record.Count); i++) {
-                    if (i < radius_record.Count) {
-                        writer.Write(radius_record[i] + "," + radius_time_record[i]);
-                        ResultScreen.text += radius_record[i] + "," + radius_time_record[i];
-                    } else {
-                        writer.Write(",");
-                        ResultScreen.text += ",";
-                    }
-                    if (i < position_record.Count) {
-                        writer.WriteLine("," + position_record[i] + "," + position_time_record[i]);
-                        ResultScreen.text += "," + position_record[i] + "," + position_time_record[i] + "\n";
-                    } else {
-                        writer.WriteLine(",");
-                        ResultScreen.text += ",\n";
-                    }
+                // store position and position time data to csv file
+                string file_path = Application.persistentDataPath + "/" + participant_id + "(X,Y,Z,time)" +(WithServo ? "(on)" : "(off)")+ ".csv";
+                StreamWriter writer = new StreamWriter(file_path, true);
+                for (int i = 0; i < position_record.Count; i++) {
+                    writer.WriteLine(position_record[i] + "," + position_time_record[i]);
                 }
                 writer.Close();
+
+                // store position and position time data to csv file
+                file_path = Application.persistentDataPath + "/" + participant_id + "(radius,time)" +(WithServo ? "(on)" : "(off)")+ ".csv";
+                writer = new StreamWriter(file_path, true);
+                for (int i = 0; i < radius_record.Count; i++) {
+                    writer.WriteLine(radius_record[i] + "," + radius_time_record[i]);
+                }
+                writer.Close();
+
+                // store threshold_radius data to csv file
+                file_path = Application.persistentDataPath + "/(id,threshold_radius)"+(WithServo ? "(on)" : "(off)")+".csv";
+                writer = new StreamWriter(file_path, true);
+                writer.WriteLine(participant_id + "," + radius_record[radius_record.Count-1]);
+                writer.Close();
+
 
                 // clear the record
                 radius_record.Clear();
@@ -264,9 +263,12 @@ public class Render : MonoBehaviour
                 position_record.Clear();
                 position_time_record.Clear();
 
+                step_start_position = CenterEyeAnchor.transform.position;
+                step_start_position.y = 0;
                 EnjoymentSurveyScreen.SetActive(true);
                 return;
         }
+        OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position;
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
         radius_record.Add(radius);
@@ -274,24 +276,24 @@ public class Render : MonoBehaviour
     }
 
     public void SurveryEnjoyment(int value) {
+        string file_path = Application.persistentDataPath + "/(id,enjoyment)" +(WithServo ? "(on)" : "(off)")+ ".csv";
         StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine("Enjoyment," + value);        
+        writer.WriteLine(participant_id, value);        
         writer.Close();
-        ResultScreen.text += "Enjoyment," + value + "\n";
     }
 
     public void SurveyRealism(int value) {
+        string file_path = Application.persistentDataPath + "/(id,realism)" +(WithServo ? "(on)" : "(off)")+ ".csv";
         StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine("Realism," + value);
+        writer.WriteLine(participant_id, value);            
         writer.Close();
-        ResultScreen.text += "Realism," + value + "\n";
     }
 
     public void SurveyPreference(int value) {
+        string file_path = Application.persistentDataPath + "/(id,preference)" +(WithServo ? "(on)" : "(off)")+ ".csv";
         StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine("Preference," + value);
+        writer.WriteLine(participant_id, value);            
         writer.Close();
-        ResultScreen.text += "Preference," + value + "\n";
         if (servo_switched) {
             EndingScreen.SetActive(true);
             return;
