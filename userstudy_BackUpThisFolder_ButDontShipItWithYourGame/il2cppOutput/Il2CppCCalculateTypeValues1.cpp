@@ -22396,18 +22396,20 @@ struct Render_tC3FEEB580ACE65C12945BECCB3F5F803443A7553  : public MonoBehaviour_
 	float ___radius_32;
 	// UnityEngine.Vector3 Render::step_start_position
 	Vector3_t24C512C7B96BBABAD472002D0BA2BDA40A5A80B2 ___step_start_position_33;
+	// UnityEngine.Vector3 Render::step_start_right
+	Vector3_t24C512C7B96BBABAD472002D0BA2BDA40A5A80B2 ___step_start_right_34;
 	// System.Collections.Generic.List`1<System.Single> Render::radius_record
-	List_1_t0D1C46FD8DDDE974D93CA4F3474EEC05AF950918* ___radius_record_34;
+	List_1_t0D1C46FD8DDDE974D93CA4F3474EEC05AF950918* ___radius_record_35;
 	// System.Collections.Generic.List`1<System.Single> Render::radius_time_record
-	List_1_t0D1C46FD8DDDE974D93CA4F3474EEC05AF950918* ___radius_time_record_35;
+	List_1_t0D1C46FD8DDDE974D93CA4F3474EEC05AF950918* ___radius_time_record_36;
 	// System.Collections.Generic.List`1<UnityEngine.Vector3> Render::position_record
-	List_1_t77B94703E05C519A9010DD0614F757F974E1CD8B* ___position_record_36;
+	List_1_t77B94703E05C519A9010DD0614F757F974E1CD8B* ___position_record_37;
 	// System.Collections.Generic.List`1<System.Single> Render::position_time_record
-	List_1_t0D1C46FD8DDDE974D93CA4F3474EEC05AF950918* ___position_time_record_37;
+	List_1_t0D1C46FD8DDDE974D93CA4F3474EEC05AF950918* ___position_time_record_38;
 	// System.String Render::participant_id
-	String_t* ___participant_id_38;
+	String_t* ___participant_id_39;
 	// System.Boolean Render::servo_switched
-	bool ___servo_switched_39;
+	bool ___servo_switched_40;
 };
 
 // ReportingCallbackSample

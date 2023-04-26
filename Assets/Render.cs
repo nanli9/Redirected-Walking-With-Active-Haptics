@@ -45,6 +45,7 @@ public class Render : MonoBehaviour
     private float radius;
 
     private Vector3 step_start_position = new Vector3(0f,0f,0f);
+    private Vector3 step_start_right = new Vector3(-1f,0f,0f);
 
     private List<float> radius_record;
     private List<float> radius_time_record;
@@ -107,7 +108,7 @@ public class Render : MonoBehaviour
 
     private void ApplyRadiusChange() {
         RealWall.transform.localScale = new Vector3(radius * 2, RealWall.transform.localScale.y, radius * 2);
-        RealWall.transform.position = new Vector3(-radius-init_distance, 2, 0);
+        RealWall.transform.position = step_start_position - step_start_right * (radius + init_distance) + new Vector3(0,2,0);
         Vector3 playerPosition = CenterEyeAnchor.transform.position;
         playerPosition.y = 0;
         Vector3 wallCenter = RealWall.transform.position;
@@ -201,6 +202,8 @@ public class Render : MonoBehaviour
         // OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position; //
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
+        step_start_right = CenterEyeAnchor.transform.right;
+        step_start_right.y = 0;
         radius_record.Add(radius);
         radius_time_record.Add(Time.time);
     }
@@ -265,12 +268,15 @@ public class Render : MonoBehaviour
 
                 step_start_position = CenterEyeAnchor.transform.position;
                 step_start_position.y = 0;
+                step_start_right = CenterEyeAnchor.transform.right;
                 EnjoymentSurveyScreen.SetActive(true);
                 return;
         }
         // OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position; //
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
+        step_start_right = CenterEyeAnchor.transform.right; 
+        step_start_right.y = 0;
         radius_record.Add(radius);
         radius_time_record.Add(Time.time);
     }
