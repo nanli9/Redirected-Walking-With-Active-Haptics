@@ -9,7 +9,7 @@ using TMPro;
 
 public class Render : MonoBehaviour
 {
-    public GameObject OVRCameraRig;
+    // public GameObject OVRCameraRig;
     public GameObject CenterEyeAnchor;
     public OVRHand LeftHand;
     public OVRHand RightHand;
@@ -198,7 +198,7 @@ public class Render : MonoBehaviour
         radius = init_radius;
         min_radius_threshold = 0.0f;
         max_radius_threshold = init_radius * 2f;
-        OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position;
+        // OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position; //
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
         radius_record.Add(radius);
@@ -268,7 +268,7 @@ public class Render : MonoBehaviour
                 EnjoymentSurveyScreen.SetActive(true);
                 return;
         }
-        OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position;
+        // OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position; //
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
         radius_record.Add(radius);
