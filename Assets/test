@@ -51,7 +51,7 @@ public class Render : MonoBehaviour
     private List<Vector3> position_record;
     private List<float> position_time_record;
 
-    private string file_path;
+    private StreamWriter writer;
     private bool servo_switched = false;
 
     // Start is called before the first frame update
@@ -65,7 +65,8 @@ public class Render : MonoBehaviour
         // WithServo = UnityEngine.Random.Range(0, 2) == 0;
         WithServo = true;
 
-        file_path = Application.persistentDataPath + "/" + DateTime.Now + ".csv";
+        string file_path = Application.persistentDataPath + "/" + DateTime.Now + ".csv";
+        writer = new StreamWriter(file_path, true);
 
         ResetExperiment();
         udpClient = new UdpClient(localPort);
@@ -89,7 +90,7 @@ public class Render : MonoBehaviour
     }
 
     private void SendServoPosition(float handProjectionResult) {
-        int calibrate = 50;
+        int calibrate = 30;
         int servoPosition = 125 + calibrate;
         if (WithServo) {
             if (handProjectionResult < 0.06f && handProjectionResult > 0f)
@@ -232,7 +233,6 @@ public class Render : MonoBehaviour
                 break;
             default: // case 4 end experiment
                 //store data and clear the record
-                StreamWriter writer = new StreamWriter(file_path, true);
                 writer.WriteLine(WithServo ? "servo_on" : "servo_off");
                 ResultScreen.text += (WithServo ? "servo_on" : "servo_off");
 
@@ -256,7 +256,6 @@ public class Render : MonoBehaviour
                         ResultScreen.text += ",\n";
                     }
                 }
-                writer.Close();
 
                 // clear the record
                 radius_record.Clear();
@@ -274,25 +273,20 @@ public class Render : MonoBehaviour
     }
 
     public void SurveryEnjoyment(int value) {
-        StreamWriter writer = new StreamWriter(file_path, true);
         writer.WriteLine("Enjoyment," + value);        
-        writer.Close();
         ResultScreen.text += "Enjoyment," + value + "\n";
     }
 
     public void SurveyRealism(int value) {
-        StreamWriter writer = new StreamWriter(file_path, true);
         writer.WriteLine("Realism," + value);
-        writer.Close();
         ResultScreen.text += "Realism," + value + "\n";
     }
 
     public void SurveyPreference(int value) {
-        StreamWriter writer = new StreamWriter(file_path, true);
         writer.WriteLine("Preference," + value);
-        writer.Close();
         ResultScreen.text += "Preference," + value + "\n";
         if (servo_switched) {
+            writer.Close();
             EndingScreen.SetActive(true);
             return;
         }
