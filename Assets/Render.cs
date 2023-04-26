@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class Render : MonoBehaviour
 {
@@ -17,7 +18,12 @@ public class Render : MonoBehaviour
     public GameObject RealWall;
     public GameObject VisualWall;
     public GameObject Floor;
-    public GameObject SurveyScreen;
+    public GameObject EnjoymentSurveyScreen;
+    public GameObject RealismSurveyScreen;
+    public GameObject PresenceSurveyScreen;
+    public GameObject StraightnessSurveyScreen;
+    public GameObject EndingScreen;
+    public TMP_Text ResultScreen;
     public float init_radius = 22f;
     public float init_distance = 0.42f;
     public float step_meter = 5f;
@@ -25,7 +31,7 @@ public class Render : MonoBehaviour
     public bool ViewTestingObjects = true;
     public bool ViewVisualWall = true;
     
-    public bool WithServo = true;
+    private bool WithServo;
     
     public string remoteIpAddress = "192.168.4.1";
     public int remotePort = 4210;
@@ -45,7 +51,8 @@ public class Render : MonoBehaviour
     private List<Vector3> position_record;
     private List<float> position_time_record;
 
-    private float filename;
+    private StreamWriter writer;
+    private bool servo_switched = false;
 
     // Start is called before the first frame update
     void Start()
@@ -54,6 +61,11 @@ public class Render : MonoBehaviour
         radius_time_record = new List<float>();
         position_record = new List<Vector3>();
         position_time_record = new List<float>();
+
+        WithServo = UnityEngine.Random.Range(0, 2) == 0;
+
+        string file_path = Application.persistentDataPath + "/" + DateTime.Now + ".csv";
+        writer = new StreamWriter(file_path, true);
 
         ResetExperiment();
         udpClient = new UdpClient(localPort);
@@ -64,9 +76,9 @@ public class Render : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
-            WithServo = !WithServo;
-        }
+        // if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
+        //     WithServo = !WithServo;
+        // }
         position_record.Add(CenterEyeAnchor.transform.position);
         position_time_record.Add(Time.time);
         SurveyScreenUpdate();
@@ -77,7 +89,7 @@ public class Render : MonoBehaviour
     }
 
     private void SendServoPosition(float handProjectionResult) {
-        int calibrate = 30;
+        int calibrate = 35;
         int servoPosition = 125 + calibrate;
         if (WithServo) {
             if (handProjectionResult < 0.06f && handProjectionResult > 0f)
@@ -114,7 +126,7 @@ public class Render : MonoBehaviour
         // if user walked for required distance for the step
         // turn on the survery screen
         if (Vector3.Distance(playerPosition, step_start_position) > step_meter) {
-            SurveyScreen.SetActive(true);
+            StraightnessSurveyScreen.SetActive(true);
         }
 
         // Apply wall shift
@@ -170,8 +182,16 @@ public class Render : MonoBehaviour
     }
 
     private void SurveyScreenUpdate() {
-        SurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
-        SurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
+        EnjoymentSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
+        EnjoymentSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
+        RealismSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
+        RealismSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
+        PresenceSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
+        PresenceSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
+        StraightnessSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
+        StraightnessSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
+        EndingScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
+        EndingScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
     }
 
     private void ResetExperiment() {
@@ -180,7 +200,6 @@ public class Render : MonoBehaviour
         max_radius_threshold = init_radius * 2f;
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
-        filename = Time.time;
         radius_record.Add(radius);
         radius_time_record.Add(Time.time);
     }
@@ -213,23 +232,29 @@ public class Render : MonoBehaviour
                 break;
             default: // case 4 end experiment
                 //store data and clear the record
-                // create a new csv file
-                string radius_path = Application.persistentDataPath + "/" + DateTime.Now + "_radius.csv";
-                string position_path = Application.persistentDataPath + "/" + DateTime.Now + "_position.csv";
+                writer.WriteLine(WithServo ? "servo_on" : "servo_off");
+                ResultScreen.text += (WithServo ? "servo_on" : "servo_off");
 
-                // store radius and radius time data to radius_path csv file
-                StreamWriter radius_writer = new StreamWriter(radius_path, true);
-                for (int i = 0; i < radius_record.Count; i++) {
-                    radius_writer.WriteLine(radius_record[i] + "," + radius_time_record[i]);
+                // store radius and radius time data to csv file
+                writer.WriteLine("Radius,RadiusTime, Position, PositionTime");
+                ResultScreen.text += "Radius,Time\n";
+                
+                for (int i = 0; i < Math.Max(radius_record.Count, position_record.Count); i++) {
+                    if (i < radius_record.Count) {
+                        writer.Write(radius_record[i] + "," + radius_time_record[i]);
+                        ResultScreen.text += radius_record[i] + "," + radius_time_record[i];
+                    } else {
+                        writer.Write(",");
+                        ResultScreen.text += ",";
+                    }
+                    if (i < position_record.Count) {
+                        writer.WriteLine("," + position_record[i] + "," + position_time_record[i]);
+                        ResultScreen.text += "," + position_record[i] + "," + position_time_record[i] + "\n";
+                    } else {
+                        writer.WriteLine(",");
+                        ResultScreen.text += ",\n";
+                    }
                 }
-                radius_writer.Close();
-
-                // store position and position time data to position_path csv file
-                StreamWriter position_writer = new StreamWriter(position_path, true);
-                for (int i = 0; i < position_record.Count; i++) {
-                    position_writer.WriteLine(position_record[i] + "," + position_time_record[i]);
-                }
-                position_writer.Close();
 
                 // clear the record
                 radius_record.Clear();
@@ -237,12 +262,36 @@ public class Render : MonoBehaviour
                 position_record.Clear();
                 position_time_record.Clear();
 
-                ResetExperiment();
+                EnjoymentSurveyScreen.SetActive(true);
                 return;
         }
         step_start_position = CenterEyeAnchor.transform.position;
         step_start_position.y = 0;
         radius_record.Add(radius);
         radius_time_record.Add(Time.time);
+    }
+
+    public void SurveryEnjoyment(int value) {
+        writer.WriteLine("Enjoyment," + value);        
+        ResultScreen.text += "Enjoyment," + value + "\n";
+    }
+
+    public void SurveyRealism(int value) {
+        writer.WriteLine("Realism," + value);
+        ResultScreen.text += "Realism," + value + "\n";
+    }
+
+    public void SurveyPreference(int value) {
+        writer.WriteLine("Preference," + value);
+        ResultScreen.text += "Preference," + value + "\n";
+        if (servo_switched) {
+            writer.Close();
+            EndingScreen.SetActive(true);
+            return;
+        }
+        WithServo = !WithServo;
+        servo_switched = true;
+
+        ResetExperiment();
     }
 }
