@@ -125,8 +125,9 @@ public class Render : MonoBehaviour
         }
 
         // if user walked for required distance for the step
+        // and all screnes are off
         // turn on the survery screen
-        if (Vector3.Distance(playerPosition, step_start_position) > step_meter) {
+        if (Vector3.Distance(playerPosition, step_start_position) > step_meter && !EnjoymentSurveyScreen.activeInHierarchy && !RealismSurveyScreen.activeInHierarchy && !PresenceSurveyScreen.activeInHierarchy && !StraightnessSurveyScreen.activeInHierarchy && !EndingScreen.activeInHierarchy) {
             StraightnessSurveyScreen.SetActive(true);
         }
 
