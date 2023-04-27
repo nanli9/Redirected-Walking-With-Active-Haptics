@@ -284,21 +284,21 @@ public class Render : MonoBehaviour
     public void SurveryEnjoyment(int value) {
         string file_path = Application.persistentDataPath + "/(id,enjoyment)" +(WithServo ? "(on)" : "(off)")+ ".csv";
         StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine(participant_id, value);        
+        writer.WriteLine(participant_id+", "+value);        
         writer.Close();
     }
 
     public void SurveyRealism(int value) {
         string file_path = Application.persistentDataPath + "/(id,realism)" +(WithServo ? "(on)" : "(off)")+ ".csv";
         StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine(participant_id, value);            
+        writer.WriteLine(participant_id+", "+value);         
         writer.Close();
     }
 
     public void SurveyPreference(int value) {
         string file_path = Application.persistentDataPath + "/(id,preference)" +(WithServo ? "(on)" : "(off)")+ ".csv";
         StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine(participant_id, value);            
+        writer.WriteLine(participant_id+", "+value);         
         writer.Close();
         if (servo_switched) {
             EndingScreen.SetActive(true);
