@@ -242,7 +242,7 @@ public class Render : MonoBehaviour
                 string file_path = Application.persistentDataPath + "/" + participant_id + "(X,Y,Z,time)" +(WithServo ? "(on)" : "(off)")+ ".csv";
                 StreamWriter writer = new StreamWriter(file_path, true);
                 for (int i = 0; i < position_record.Count; i++) {
-                    writer.WriteLine(position_record[i] + "," + position_time_record[i]);
+                    writer.WriteLine(position_record[i][0] + "," + position_record[i][1] + "," + position_record[i][2] + "," + position_time_record[i]);
                 }
                 writer.Close();
 
