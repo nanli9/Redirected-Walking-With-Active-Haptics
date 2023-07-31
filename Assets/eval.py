@@ -38,6 +38,8 @@ def get_bounds_for_path(path):
     min_y -= padding
     max_x += padding
     max_y += padding
+    min_x = min(min_x,1)
+    min_y = min(min_y,1)
     return min_x, min_y, max_x, max_y
 
 # Calculate bounds for each path on init
