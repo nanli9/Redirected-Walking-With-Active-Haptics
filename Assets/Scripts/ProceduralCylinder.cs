@@ -75,6 +75,30 @@ public class ProceduralCylinder : MonoBehaviour {
 		float uvStepH = 1.0f / radialSegments;
 		float uvStepV = 1.0f / heightSegments;
 
+		LineRenderer lineRenderer = gameObject.GetComponent<LineRenderer>();
+		if (lineRenderer == null)
+		{
+			lineRenderer = gameObject.AddComponent<LineRenderer>();
+		}
+		lineRenderer.positionCount = radialSegments + 1;
+		lineRenderer.useWorldSpace = false;
+
+		for (int i = 0; i <= radialSegments; i++)
+		{
+			// calculate angle for that vertex on the unit circle
+			float angle = i * angleStep;
+
+			// "fold" the line around as a circle by placing the first and last point at the same spot
+			if (i == radialSegments)
+			{
+				angle = 0;
+			}
+
+			// position current point
+			Vector3 point = new Vector3(radius * Mathf.Cos(angle), length, radius * Mathf.Sin(angle));
+			lineRenderer.SetPosition(i, point);
+		}
+
 		for (int j = 0; j < numVertexRows; j++)
 		{
 			for (int i = 0; i < numVertexColumns; i++)
@@ -138,13 +162,6 @@ public class ProceduralCylinder : MonoBehaviour {
 		modelMesh.SetTriangles(trisOuter, 0);    // Assign the outer tris to the first submesh
 		modelMesh.SetTriangles(trisInner, 1);    // Assign the inner tris to the second submesh
 
-		modelMesh.RecalculateNormals();
-		modelMesh.RecalculateBounds();
-		calculateMeshTangents(modelMesh);
-
-		// After recalculating normals and bounds
-		MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
-		meshRenderer.sharedMaterials = new Material[2]; // Create two material slots
 	}
 
 	
