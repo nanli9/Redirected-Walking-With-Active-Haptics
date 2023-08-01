@@ -27,7 +27,9 @@ public class ProceduralCylinder : MonoBehaviour {
 	public float radiusScale = 1.0f;
 	public float initialDistance = 0.3f;
 	public float path = 5.0f;
+	public GameObject startPosition;
 	public GameObject endPosition;
+	public GameObject TOV;
 	//private variables
 	private Mesh modelMesh;
 	private MeshFilter meshFilter;
@@ -43,6 +45,34 @@ public class ProceduralCylinder : MonoBehaviour {
 		meshRenderer.sharedMaterial.color = Color.white;
 	}
 	
+	private Vector3 getCenterPosition(float rS) {
+		return new Vector3(-rS*radius-initialDistance, 0, 0);
+	}
+
+	private Vector3 getProjectionPosition(float rS) {
+		float endPositionAngle = path / (radius * rS);
+		Vector3 center = getCenterPosition(rS);
+		return center - center[0] * new Vector3(Mathf.Cos(endPositionAngle),0,Mathf.Sin(endPositionAngle));
+	}
+
+	private float getCameraSize(float minR, float maxR) {
+		Vector3 minV = getProjectionPosition(minR);
+		Vector3 maxV = getProjectionPosition(maxR);
+		float minX, maxX, minZ, maxZ;
+		minX = maxX = minV[0];
+		minZ = maxZ = minV[2];
+		minX = Mathf.Min(minX, maxV[0]);
+		minZ = Mathf.Min(minZ, maxV[2]);
+		maxX = Mathf.Max(maxX, maxV[0]);
+		maxZ = Mathf.Max(maxZ, maxV[2]);
+		minX = Mathf.Min(minX, startPosition.transform.position[0]);
+		minZ = Mathf.Min(minZ, startPosition.transform.position[2]);
+		maxX = Mathf.Max(maxX, startPosition.transform.position[0]);
+		maxZ = Mathf.Max(maxZ, startPosition.transform.position[2]);
+		// Debug.Log(minV+", "+maxV+", "+minX+", "+maxX+", "+minZ+", "+maxZ);
+		return Mathf.Max(maxX - minX, maxZ - minZ)*0.5f;
+	}
+
 	public void Rebuild()
 	{
 		// create the mesh
@@ -158,9 +188,13 @@ public class ProceduralCylinder : MonoBehaviour {
 		}
 
 		// After creating the mesh and LineRenderer
-		gameObject.transform.position = new Vector3(-radiusScale*radius-initialDistance, 0, 0);
-		float endPositionAngle = path / (radius * radiusScale);
-		endPosition.transform.position = new Vector3((radiusScale*radius+initialDistance)*Mathf.Cos(endPositionAngle),0,(radiusScale*radius+initialDistance)*Mathf.Sin(endPositionAngle)) + gameObject.transform.position;
+		gameObject.transform.position = getCenterPosition(radiusScale);
+		endPosition.transform.position = getProjectionPosition(radiusScale);
+		float cameraSize = getCameraSize(2.0f,1000000.0f);
+		startPosition.transform.localScale = new Vector3(Mathf.Log(cameraSize + 1)/5.0f, 0.01f, Mathf.Log(cameraSize + 1)/5.0f); 
+		endPosition.transform.localScale = new Vector3(Mathf.Log(cameraSize + 1)/5.0f, 0.01f, Mathf.Log(cameraSize + 1)/5.0f);
+		TOV.transform.position = new Vector3(0, 10, cameraSize);
+		TOV.GetComponent<Camera>().orthographicSize  = cameraSize * 1.1f;
 
 		// assign vertices, uvs and tris
 		modelMesh.vertices = vertices;
