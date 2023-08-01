@@ -26,6 +26,8 @@ public class ProceduralCylinder : MonoBehaviour {
 	public int heightSegments = DEFAULT_HEIGHT_SEGMENTS;
 	public float radiusScale = 1.0f;
 	public float initialDistance = 0.3f;
+	public float path = 5.0f;
+	public GameObject endPosition;
 	//private variables
 	private Mesh modelMesh;
 	private MeshFilter meshFilter;
