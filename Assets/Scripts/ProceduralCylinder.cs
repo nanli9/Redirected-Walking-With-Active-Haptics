@@ -18,13 +18,14 @@ public class ProceduralCylinder : MonoBehaviour {
 	private const int DEFAULT_HEIGHT_SEGMENTS = 2;
 	private const int MIN_RADIAL_SEGMENTS = 3;
 	private const int MIN_HEIGHT_SEGMENTS = 1;
-	private const float DEFAULT_RADIUS = 0.5f;
+	private const float DEFAULT_RADIUS = 1.0f;
 	private const float DEFAULT_HEIGHT = 1.0f;
 	
 	//public variables
 	public int radialSegments = DEFAULT_RADIAL_SEGMENTS;
 	public int heightSegments = DEFAULT_HEIGHT_SEGMENTS;
-	
+	public float radiusScale = 1.0f;
+	public float initialDistance = 0.3f;
 	//private variables
 	private Mesh modelMesh;
 	private MeshFilter meshFilter;
@@ -95,7 +96,7 @@ public class ProceduralCylinder : MonoBehaviour {
 			}
 
 			// position current point
-			Vector3 point = new Vector3(radius * Mathf.Cos(angle), length, radius * Mathf.Sin(angle));
+			Vector3 point = new Vector3(radiusScale * radius * Mathf.Cos(angle), length, radiusScale * radius * Mathf.Sin(angle));
 			lineRenderer.SetPosition(i, point);
 		}
 
@@ -113,9 +114,8 @@ public class ProceduralCylinder : MonoBehaviour {
 				}
 
 				// position current vertex (for both the outer and inner vertices)
-				vertices[j * numVertexColumns + i] = new Vector3(radius * Mathf.Cos(angle), j * heightStep, radius * Mathf.Sin(angle));
-				vertices[numVertices + j * numVertexColumns + i] = new Vector3(radius * Mathf.Cos(angle), j * heightStep, radius * Mathf.Sin(angle));
-
+				vertices[j * numVertexColumns + i] = new Vector3(radius * radiusScale * Mathf.Cos(angle), j * heightStep, radius * radiusScale * Mathf.Sin(angle));
+				vertices[numVertices + j * numVertexColumns + i] = new Vector3(radius * radiusScale * Mathf.Cos(angle), j * heightStep, radius * radiusScale * Mathf.Sin(angle));
 				// calculate UVs (for both the outer and inner UVs)
 				uvs[j * numVertexColumns + i] = new Vector2(i * uvStepH, j * uvStepV);
 				uvs[numUVs + j * numVertexColumns + i] = new Vector2(i * uvStepH, j * uvStepV);
@@ -154,6 +154,9 @@ public class ProceduralCylinder : MonoBehaviour {
 				}
 			}
 		}
+
+		// After creating the mesh and LineRenderer
+		gameObject.transform.position = new Vector3(-radiusScale-initialDistance, 0, 0);
 
 		// assign vertices, uvs and tris
 		modelMesh.vertices = vertices;
