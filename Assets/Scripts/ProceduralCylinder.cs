@@ -158,7 +158,9 @@ public class ProceduralCylinder : MonoBehaviour {
 		}
 
 		// After creating the mesh and LineRenderer
-		gameObject.transform.position = new Vector3(-radiusScale-initialDistance, 0, 0);
+		gameObject.transform.position = new Vector3(-radiusScale*radius-initialDistance, 0, 0);
+		float endPositionAngle = path / (radius * radiusScale);
+		endPosition.transform.position = new Vector3((radiusScale*radius+initialDistance)*Mathf.Cos(endPositionAngle),0,(radiusScale*radius+initialDistance)*Mathf.Sin(endPositionAngle)) + gameObject.transform.position;
 
 		// assign vertices, uvs and tris
 		modelMesh.vertices = vertices;
@@ -166,6 +168,23 @@ public class ProceduralCylinder : MonoBehaviour {
 		modelMesh.subMeshCount = 2;    // Define two submeshes
 		modelMesh.SetTriangles(trisOuter, 0);    // Assign the outer tris to the first submesh
 		modelMesh.SetTriangles(trisInner, 1);    // Assign the inner tris to the second submesh
+
+	    MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+		if (meshRenderer == null) 
+		{
+			Debug.Log("MeshRenderer is missing");
+			return;
+		}
+
+		if (meshRenderer.sharedMaterials.Length < 2) 
+		{
+			Debug.Log("Not enough materials in MeshRenderer");
+			return;
+		}
+
+		meshRenderer.sharedMaterials[0].mainTextureScale = new Vector2(radiusScale, 1);
+		meshRenderer.sharedMaterials[1].mainTextureScale = new Vector2(radiusScale, 1);
+		meshRenderer.sharedMaterials[1].mainTextureOffset = new Vector2(-radiusScale, 0);
 
 	}
 
