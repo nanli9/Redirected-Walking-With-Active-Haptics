@@ -7,6 +7,24 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+
+public static class IListExtensions {
+    /// <summary>
+    /// Shuffles the element order of the specified list.
+    /// </summary>
+    public static void Shuffle<T>(this IList<T> ts) {
+        var count = ts.Count;
+        var last = count - 1;
+        for (var i = 0; i < last; ++i) {
+            var r = UnityEngine.Random.Range(i, count);
+            var tmp = ts[i];
+            ts[i] = ts[r];
+            ts[r] = tmp;
+        }
+    }
+}
+ 
+
 public class Render : MonoBehaviour
 {
     /// <summary> User(Center Eye Anchor) </summary>
@@ -33,12 +51,10 @@ public class Render : MonoBehaviour
     public float d = 0.42f;
     /// <summary> Path User Required To Travel </summary>
     public float p = 5f;
-    /// <summary> Default Radius Index </summary>
-    private static readonly int DEFAULT_ri = 0;
     /// <summary> Allowed Radius </summary>
     private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f, STRAIGHT}; 
     /// <summary> [Placeholder] Current Radius </summary>
-    private float r = _r[DEFAULT_ri];
+    private float r;
     /// <summary> [Placeholder] Normalized Vector Towards Left Of The User(U) </summary>
     private Vector3 L;
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
@@ -48,6 +64,8 @@ public class Render : MonoBehaviour
     /// <summary> Remote Servo Condition Switch </summary>
     private bool WithServo;
     
+    private List<Tuple<float, bool>> Cases = new List<Tuple<float, bool>>();
+
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
     public bool ViewVisualWall = true;
@@ -64,9 +82,16 @@ public class Render : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        // WithServo = UnityEngine.Random.Range(0, 2) == 0;
-        WithServo = true;
-        
+        // Create Cases
+        foreach (var radius in _r)
+        {
+            Cases.Add(new Tuple<float, bool>(radius, true));
+            Cases.Add(new Tuple<float, bool>(radius, false));
+        }
+        // Shuffle Cases
+        Cases.Shuffle();
+
+        // Init Environment
         InitEnvironment();
 
         // Init UDP
@@ -77,7 +102,17 @@ public class Render : MonoBehaviour
 
     void InitEnvironment()
     {
-        r = 
+        // Pop one at a time
+        if (Cases.Count > 0)
+        {
+            var c = Cases[0];
+            r = c.Item1;
+            WithServo = c.Item2;
+            Debug.Log($"Radius: {r}, On/Off: {WithServo}");
+            Cases.RemoveAt(0);
+        } else {
+            Debug.Log("No more case, terminating experiment");
+        }
         L = Vector3.Cross(U.transform.forward,Vector3.up);
         HW.transform.position = U.transform.position + L * d;
     }
