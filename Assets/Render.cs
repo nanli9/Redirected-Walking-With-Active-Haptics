@@ -9,305 +9,182 @@ using TMPro;
 
 public class Render : MonoBehaviour
 {
-    // public GameObject OVRCameraRig;
-    public GameObject CenterEyeAnchor;
-    public OVRHand LeftHand;
-    public OVRHand RightHand;
-    public GameObject RealSphere;
-    public GameObject VisualSphere;
-    public GameObject RealWall;
-    public GameObject VisualWall;
-    public GameObject Floor;
-    public GameObject EnjoymentSurveyScreen;
-    public GameObject RealismSurveyScreen;
-    public GameObject PresenceSurveyScreen;
-    public GameObject StraightnessSurveyScreen;
-    public GameObject EndingScreen;
-    public TMP_Text ResultScreen;
-    public float init_radius = 22f;
-    public float init_distance = 0.42f;
-    public float step_meter = 5f;
+    /// <summary> User(Center Eye Anchor) </summary>
+    public GameObject U;
+    /// <summary> Actual Hand </summary>
+    public OVRHand AH;
+    /// <summary> Right Hand </summary>
+    public OVRHand RH;
+    /// <summary> Actual Sphere </summary>
+    public GameObject AS;
+    /// <summary> Haptic Sphere </summary>
+    public GameObject HS;    
+    /// <summary> Visual Sphere </summary>
+    public GameObject VS;
+    /// <summary> Haptic Wall </summary>
+    public GameObject HW;
+    /// <summary> Visual Wall </summary>
+    public GameObject VW;
+    /// <summary> Visual Floor </summary>
+    public GameObject VF; 
+    /// <summary> Straightness Radius </summary>
+    private static readonly float STRAIGHT = 1000000.0f;
+    /// <summary> Initial Distance </summary>
+    public float d = 0.42f;
+    /// <summary> Path User Required To Travel </summary>
+    public float p = 5f;
+    /// <summary> Default Radius Index </summary>
+    private static readonly int DEFAULT_ri = 0;
+    /// <summary> Allowed Radius </summary>
+    private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f, STRAIGHT}; 
+    /// <summary> [Placeholder] Current Radius </summary>
+    private float r = _r[DEFAULT_ri];
+    /// <summary> [Placeholder] Normalized Vector Towards Left Of The User(U) </summary>
+    private Vector3 L;
+    /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
+    private Vector3 V;
+    /// <summary> [Placeholder] Projected Point On The Surface Of Haptic Wall(HW) Towards User(U)</summary>
+    private Vector3 P;
+    /// <summary> Remote Servo Condition Switch </summary>
+    private bool WithServo;
+    
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
     public bool ViewVisualWall = true;
     
-    private bool WithServo;
-    
-    public string remoteIpAddress = "192.168.4.1";
-    public int remotePort = 4210;
+    /**
+      *  Remote Servo Connection Variables
+      */
+    private const string remoteIpAddress = "192.168.4.1";
+    private const int remotePort = 4210;
     private const int localPort = 4210;
     private UdpClient udpClient;
     private IPEndPoint remoteEndPoint;
 
-
-    private float min_radius_threshold;
-    private float max_radius_threshold;
-    private float radius;
-
-    private Vector3 step_start_position = new Vector3(0f,0f,0f);
-    private Vector3 step_start_right = new Vector3(-1f,0f,0f);
-
-    private List<float> radius_record;
-    private List<float> radius_time_record;
-    private List<Vector3> position_record;
-    private List<float> position_time_record;
-
-    private string participant_id;
-    private bool servo_switched = false;
-
     // Start is called before the first frame update
     void Start()
     {
-        radius_record = new List<float>();
-        radius_time_record = new List<float>();
-        position_record = new List<Vector3>();
-        position_time_record = new List<float>();
-
         // WithServo = UnityEngine.Random.Range(0, 2) == 0;
         WithServo = true;
+        
+        InitEnvironment();
 
-        participant_id = DateTime.Now.ToString("yyyy_MM_dd-HH_mm_ss");
-
-        ResetExperiment();
+        // Init UDP
         udpClient = new UdpClient(localPort);
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
         Debug.Log("UDP server started");
     }
 
+    void InitEnvironment()
+    {
+        r = 
+        L = Vector3.Cross(U.transform.forward,Vector3.up);
+        HW.transform.position = U.transform.position + L * d;
+    }
+
     // Update is called once per frame
     void Update()
     {
-        // if (RightHand.GetFingerPinchStrength(OVRHand.HandFinger.Ring) > 0.85f) {
-        //     WithServo = !WithServo;
-        // }
-        position_record.Add(CenterEyeAnchor.transform.position);
-        position_time_record.Add(Time.time);
-        SurveyScreenUpdate();
-        ApplyRadiusChange();
         TestingObjectsViewUpdate();
-        VisualWall.SetActive(ViewVisualWall);
-        SendServoPosition(handProjection());
+        VW.SetActive(ViewVisualWall);
+
+
+        // SendServoPosition(handProjection());
     }
 
-    private void SendServoPosition(float handProjectionResult) {
-        int calibrate = 50;
-        int servoPosition = 125 + calibrate;
-        if (WithServo) {
-            if (handProjectionResult < 0.06f && handProjectionResult > 0f)
-            {
-                servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, handProjectionResult / 0.06f)) + calibrate;
-            }
-            else if (handProjectionResult >= 0.04f)
-            {
-                servoPosition = 85 + calibrate;
-            }
-        }
-        byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
-        udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
-    }
-
-    private void ApplyRadiusChange() {
-        RealWall.transform.localScale = new Vector3(radius * 2, RealWall.transform.localScale.y, radius * 2);
-        RealWall.transform.position = step_start_position - step_start_right * (radius + init_distance) + new Vector3(0,2,0);
-        Vector3 playerPosition = CenterEyeAnchor.transform.position;
-        playerPosition.y = 0;
-        Vector3 wallCenter = RealWall.transform.position;
-        wallCenter.y = 0;
-        Vector3 playerToWall = playerPosition - wallCenter;
-        Vector3 wallNormal = RealWall.transform.up;
-        VisualWall.transform.position = RealWall.transform.position + playerToWall.normalized * radius;
-        VisualWall.transform.rotation = Quaternion.LookRotation(-wallNormal, playerToWall.normalized);
-
-        // Calculate wall shift
-        float wallAngle = Mathf.Atan2(playerToWall.z, playerToWall.x);  // calculate angle of player from real wall
-        if (playerToWall.x < 0f) {                                      // cast it to (0, 2PI) System
-            wallAngle += Mathf.PI * 2f;
-        }
-
-        // if user walked for required distance for the step
-        // and all screnes are off
-        // turn on the survery screen
-        if (Vector3.Distance(playerPosition, step_start_position) > step_meter && !EnjoymentSurveyScreen.activeInHierarchy && !RealismSurveyScreen.activeInHierarchy && !PresenceSurveyScreen.activeInHierarchy && !StraightnessSurveyScreen.activeInHierarchy && !EndingScreen.activeInHierarchy) {
-            StraightnessSurveyScreen.SetActive(true);
-        }
-
-        // Apply wall shift
-        Vector3 visualWallRight = Vector3.Cross(playerToWall.normalized, wallNormal);                   // get the shifting direction
-        VisualWall.transform.position += visualWallRight * (1 - wallAngle) * (radius + init_distance);  // Apply Shift to Opposite Direction of Walking in circunstance scale
-    }
 
     private void TestingObjectsViewUpdate() {
         if (ViewTestingObjects) {
-            RealWall.layer = LayerMask.NameToLayer("Default");
-            RealSphere.layer = LayerMask.NameToLayer("Default");
-            VisualSphere.layer = LayerMask.NameToLayer("Default");
+            HW.layer = LayerMask.NameToLayer("Default");
+            AS.layer = LayerMask.NameToLayer("Default");
+            VS.layer = LayerMask.NameToLayer("Default");
         } else {
-            RealWall.layer = LayerMask.NameToLayer("TestingObject");
-            RealSphere.layer = LayerMask.NameToLayer("TestingObject");
-            VisualSphere.layer = LayerMask.NameToLayer("TestingObject");
+            HW.layer = LayerMask.NameToLayer("TestingObject");
+            AS.layer = LayerMask.NameToLayer("TestingObject");
+            VS.layer = LayerMask.NameToLayer("TestingObject");
         }
     }
 
-    private float handProjection() {
-        Vector3 realHandPosition = LeftHand.PointerPose.position;
-        Vector3 realWallCenter = RealWall.transform.position; 
-        realWallCenter.y = 0;
-        RealSphere.transform.position = realHandPosition;
-        Vector3 realHand2DPosition = new Vector3(realHandPosition.x,0,realHandPosition.z);
-        Vector3 handToWallCenter = realHand2DPosition - realWallCenter;
+    // private void SendServoPosition(float handProjectionResult) {
+    //     int calibrate = 50;
+    //     int servoPosition = 125 + calibrate;
+    //     if (WithServo) {
+    //         if (handProjectionResult < 0.06f && handProjectionResult > 0f)
+    //         {
+    //             servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, handProjectionResult / 0.06f)) + calibrate;
+    //         }
+    //         else if (handProjectionResult >= 0.04f)
+    //         {
+    //             servoPosition = 85 + calibrate;
+    //         }
+    //     }
+    //     byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
+    //     udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
+    // }
 
-        if (Mathf.Abs(handToWallCenter.magnitude) <= radius)
-        {
-            Vector3 handProjectedOnWall = realWallCenter + (handToWallCenter.normalized * radius);
-            handProjectedOnWall.y = realHandPosition.y;
-            VisualSphere.transform.position = handProjectedOnWall;
-        } else {
-            VisualSphere.transform.position = realHandPosition;
-        }
-        if (Mathf.Abs(handToWallCenter.magnitude) <= radius - 0.03f)
-        {
-            Vector3 handProjectedOnWall = realWallCenter + (handToWallCenter.normalized * (radius - 0.03f));
-            handProjectedOnWall.y = realHandPosition.y;
-            LeftHand.UseRenderPosition = UseRenderPosition;
-            LeftHand.RenderPosition = handProjectedOnWall;
-        } else {
-            LeftHand.UseRenderPosition = false;
-        }
-        float magnitude = (RealSphere.transform.position - VisualSphere.transform.position).magnitude; 
+    // private void ApplyRadiusChange() {
+    //     HW.transform.localScale = new Vector3(radius * 2, HW.transform.localScale.y, radius * 2);
+    //     HW.transform.position = step_start_position - step_start_right * (radius + d) + new Vector3(0,2,0);
+    //     Vector3 playerPosition = U.transform.position;
+    //     playerPosition.y = 0;
+    //     Vector3 wallCenter = HW.transform.position;
+    //     wallCenter.y = 0;
+    //     Vector3 playerToWall = playerPosition - wallCenter;
+    //     Vector3 wallNormal = HW.transform.up;
+    //     VW.transform.position = HW.transform.position + playerToWall.normalized * radius;
+    //     VW.transform.rotation = Quaternion.LookRotation(-wallNormal, playerToWall.normalized);
+
+    //     // Calculate wall shift
+    //     float wallAngle = Mathf.Atan2(playerToWall.z, playerToWall.x);  // calculate angle of player from real wall
+    //     if (playerToWall.x < 0f) {                                      // cast it to (0, 2PI) System
+    //         wallAngle += Mathf.PI * 2f;
+    //     }
+
+    //     // if user walked for required distance for the step
+    //     // and all screnes are off
+    //     // turn on the survery screen
+    //     if (Vector3.Distance(playerPosition, step_start_position) > step_meter && !EnjoymentSurveyScreen.activeInHierarchy && !RealismSurveyScreen.activeInHierarchy && !PresenceSurveyScreen.activeInHierarchy && !StraightnessSurveyScreen.activeInHierarchy && !EndingScreen.activeInHierarchy) {
+    //         StraightnessSurveyScreen.SetActive(true);
+    //     }
+
+    //     // Apply wall shift
+    //     Vector3 visualWallRight = Vector3.Cross(playerToWall.normalized, wallNormal);                   // get the shifting direction
+    //     VW.transform.position += visualWallRight * (1 - wallAngle) * (radius + d);  // Apply Shift to Opposite Direction of Walking in circunstance scale
+    // }
+
+    // private float handProjection() {
+    //     Vector3 realHandPosition = AH.PointerPose.position;
+    //     Vector3 HWCenter = HW.transform.position; 
+    //     HWCenter.y = 0;
+    //     AS.transform.position = realHandPosition;
+    //     Vector3 realHand2DPosition = new Vector3(realHandPosition.x,0,realHandPosition.z);
+    //     Vector3 handToWallCenter = realHand2DPosition - HWCenter;
+
+    //     if (Mathf.Abs(handToWallCenter.magnitude) <= radius)
+    //     {
+    //         Vector3 handProjectedOnWall = HWCenter + (handToWallCenter.normalized * radius);
+    //         handProjectedOnWall.y = realHandPosition.y;
+    //         VS.transform.position = handProjectedOnWall;
+    //     } else {
+    //         VS.transform.position = realHandPosition;
+    //     }
+    //     if (Mathf.Abs(handToWallCenter.magnitude) <= radius - 0.03f)
+    //     {
+    //         Vector3 handProjectedOnWall = HWCenter + (handToWallCenter.normalized * (radius - 0.03f));
+    //         handProjectedOnWall.y = realHandPosition.y;
+    //         AH.UseRenderPosition = UseRenderPosition;
+    //         AH.RenderPosition = handProjectedOnWall;
+    //     } else {
+    //         AH.UseRenderPosition = false;
+    //     }
+    //     float magnitude = (AS.transform.position - VS.transform.position).magnitude; 
         
-        if (Mathf.Approximately(magnitude, 0f)) {
-            return 0f;
-        } else {
-            return magnitude;
-        }
+    //     if (Mathf.Approximately(magnitude, 0f)) {
+    //         return 0f;
+    //     } else {
+    //         return magnitude;
+    //     }
 
-    }
+    // }
 
-    private void SurveyScreenUpdate() {
-        EnjoymentSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
-        EnjoymentSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
-        RealismSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
-        RealismSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
-        PresenceSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
-        PresenceSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
-        StraightnessSurveyScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
-        StraightnessSurveyScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
-        EndingScreen.transform.position = CenterEyeAnchor.transform.position + CenterEyeAnchor.transform.forward * init_distance;
-        EndingScreen.transform.rotation = CenterEyeAnchor.transform.rotation;
-    }
-
-    private void ResetExperiment() {
-        radius = init_radius;
-        min_radius_threshold = 0.0f;
-        max_radius_threshold = init_radius * 2f;
-        // OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position; //
-        step_start_position = CenterEyeAnchor.transform.position;
-        step_start_position.y = 0;
-        step_start_right = CenterEyeAnchor.transform.right;
-        step_start_right.y = 0;
-        radius_record.Add(radius);
-        radius_time_record.Add(Time.time);
-    }
-
-    public void SurveyStraightness(int answer) {
-        switch (answer) {
-            case 1:
-                min_radius_threshold = radius;
-                radius += 0.30f * (max_radius_threshold - radius);
-                break;
-            case 2:
-                min_radius_threshold = radius;
-                radius += 0.15f * (max_radius_threshold - radius);
-                break;
-            case 3:
-                min_radius_threshold = radius;
-                radius += 0.07f * (max_radius_threshold - radius);
-                break;
-            case 5:
-                max_radius_threshold = radius;
-                radius -= 0.07f * (radius - min_radius_threshold);
-                break;
-            case 6:
-                max_radius_threshold = radius;
-                radius -= 0.15f * (radius - min_radius_threshold);
-                break;
-            case 7:
-                max_radius_threshold = radius;
-                radius -= 0.30f * (radius - min_radius_threshold);
-                break;
-            default: // case 4 end experiment
-                //store data and clear the record
-
-                // store position and position time data to csv file
-                string file_path = Application.persistentDataPath + "/" + participant_id + "(X,Y,Z,time)" +(WithServo ? "(on)" : "(off)")+ ".csv";
-                StreamWriter writer = new StreamWriter(file_path, true);
-                for (int i = 0; i < position_record.Count; i++) {
-                    writer.WriteLine(position_record[i][0] + "," + position_record[i][1] + "," + position_record[i][2] + "," + position_time_record[i]);
-                }
-                writer.Close();
-
-                // store position and position time data to csv file
-                file_path = Application.persistentDataPath + "/" + participant_id + "(radius,time)" +(WithServo ? "(on)" : "(off)")+ ".csv";
-                writer = new StreamWriter(file_path, true);
-                for (int i = 0; i < radius_record.Count; i++) {
-                    writer.WriteLine(radius_record[i] + "," + radius_time_record[i]);
-                }
-                writer.Close();
-
-                // store threshold_radius data to csv file
-                file_path = Application.persistentDataPath + "/(id,threshold_radius)"+(WithServo ? "(on)" : "(off)")+".csv";
-                writer = new StreamWriter(file_path, true);
-                writer.WriteLine(participant_id + "," + radius_record[radius_record.Count-1]);
-                writer.Close();
-
-
-                // clear the record
-                radius_record.Clear();
-                radius_time_record.Clear();
-                position_record.Clear();
-                position_time_record.Clear();
-
-                step_start_position = CenterEyeAnchor.transform.position;
-                step_start_position.y = 0;
-                step_start_right = CenterEyeAnchor.transform.right;
-                EnjoymentSurveyScreen.SetActive(true);
-                return;
-        }
-        // OVRCameraRig.transform.position -= CenterEyeAnchor.transform.position; //
-        step_start_position = CenterEyeAnchor.transform.position;
-        step_start_position.y = 0;
-        step_start_right = CenterEyeAnchor.transform.right; 
-        step_start_right.y = 0;
-        radius_record.Add(radius);
-        radius_time_record.Add(Time.time);
-    }
-
-    public void SurveryEnjoyment(int value) {
-        string file_path = Application.persistentDataPath + "/(id,enjoyment)" +(WithServo ? "(on)" : "(off)")+ ".csv";
-        StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine(participant_id+", "+value);        
-        writer.Close();
-    }
-
-    public void SurveyRealism(int value) {
-        string file_path = Application.persistentDataPath + "/(id,realism)" +(WithServo ? "(on)" : "(off)")+ ".csv";
-        StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine(participant_id+", "+value);         
-        writer.Close();
-    }
-
-    public void SurveyPreference(int value) {
-        string file_path = Application.persistentDataPath + "/(id,preference)" +(WithServo ? "(on)" : "(off)")+ ".csv";
-        StreamWriter writer = new StreamWriter(file_path, true);
-        writer.WriteLine(participant_id+", "+value);         
-        writer.Close();
-        if (servo_switched) {
-            EndingScreen.SetActive(true);
-            return;
-        }
-        WithServo = !WithServo;
-        servo_switched = true;
-
-        ResetExperiment();
-    }
 }
