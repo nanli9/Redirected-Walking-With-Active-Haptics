@@ -120,7 +120,7 @@ public class Render : MonoBehaviour
             var c = Cases[0];
             r = c.Item1;
             WithServo = c.Item2;
-            // Debug.Log($"Radius: {r}, On/Off: {WithServo}");
+            Debug.Log($"Radius: {r}, On/Off: {WithServo}");
             Cases.RemoveAt(0);
         } else {
             Debug.Log("No more case, terminating experiment");
@@ -171,6 +171,7 @@ public class Render : MonoBehaviour
         TestingObjectsViewUpdate();
         VW.SetActive(ViewVisualWall);
 
+        VisionRendering();
 
         // SendServoPosition(handProjection());
     }
