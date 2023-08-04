@@ -202,7 +202,7 @@ public class Render : MonoBehaviour
         theta = (Mathf.Atan2(V_norm.z, V_norm.x) + 2 * Mathf.PI) % (2 * Mathf.PI) - stheta;
 
         // 6. Get User Travel Distance from User Relative Angle multiplied by sum of Radius of Haptic Wall and Initial Distance.
-        td = Mathf.Abs(theta) * (r + d);
+        td = theta * (r + d);
 
         // 7. Get the Shifting Direction Vector, whcihc is oppsite to expected walking direction of User, which is same as clockwize Tangent Unit Vector, in Travel Distance Magnitude.
         S_vec = td * T_hat;
