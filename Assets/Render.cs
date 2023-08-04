@@ -45,6 +45,10 @@ public class Render : MonoBehaviour
     public GameObject VW;
     /// <summary> Visual Floor </summary>
     public GameObject VF; 
+    /// <summary> Start Location Indicator </summary>
+    public GameObject SL;
+    /// <summary> End Location Indicator </summary>
+    public GameObject EL;
     /// <summary> Straightness Radius </summary>
     private static readonly float STRAIGHT = 1000000.0f;
     /// <summary> Height Of All Walls </summary>
@@ -54,17 +58,19 @@ public class Render : MonoBehaviour
     /// <summary> Path User Required To Travel </summary>
     public float p = 5f;
     /// <summary> Allowed Radius </summary>
-    private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f, STRAIGHT}; 
+    private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f}; 
     /// <summary> [Placeholder] Current Radius </summary>
     private float r;
-    /// <summary> [Placeholder] Normalized Vector Towards Left Of The User(U) </summary>
-    private Vector3 L_hat;
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
     private Vector3 V_vec;
     /// <summary> [Placeholder] Normalized Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
     private Vector3 V_norm;
     /// <summary> [Placeholder] Relative Angle from Projected Vector </summary>
     private float theta;
+    /// <summary> [Placeholder] Initial Projected Vector From Center Of Actual Wall(AW) to Start Location (SL)</summary>
+    private Vector3 SV;
+    /// <summary> [Placeholder] Relative Angle from Initial Projected Vector</summary>
+    private float stheta;
     /// <summary> [Placeholder] Travel Distance </summary>
     private float td;
     /// <summary> [Placeholder] Projected Point On The Surface Of Haptic Wall(HW) Towards User(U)</summary>
@@ -91,7 +97,27 @@ public class Render : MonoBehaviour
     private UdpClient udpClient;
     private IPEndPoint remoteEndPoint;
 
-    // Start is called before the first frame update
+    /**
+      *  Testing Objects Display Status Update
+      */
+    private void TestingObjectsViewUpdate() {
+        if (ViewTestingObjects) {
+            HW.layer = LayerMask.NameToLayer("Default");
+            AS.layer = LayerMask.NameToLayer("Default");
+            VS.layer = LayerMask.NameToLayer("Default");
+            HS.layer = LayerMask.NameToLayer("Default");
+        } else {
+            HW.layer = LayerMask.NameToLayer("TestingObject");
+            AS.layer = LayerMask.NameToLayer("TestingObject");
+            VS.layer = LayerMask.NameToLayer("TestingObject");
+            HS.layer = LayerMask.NameToLayer("TestingObject");
+        }
+    }
+
+
+    /**
+      *  Start is called before the first frame update
+      */
     void Start()
     {
         // Create Cases
@@ -112,6 +138,24 @@ public class Render : MonoBehaviour
         Debug.Log("UDP server started");
     }
 
+    // Update is called once per frame
+    void Update()
+    {
+        // Testing Variable Update
+        VW.SetActive(ViewVisualWall);
+        TestingObjectsViewUpdate();
+
+        // Rendering Algorithm Update
+        VisionRendering();  
+        HapticRendering();  // Dependent on Vision Rendering Algorithm
+
+        if (td > p) {
+            // Should have questionaire, which calls Initialization() after questionaire is done.
+            // For now, just call Initialization() directly.
+            Initialization();
+        }
+    }
+
     void Initialization()
     {
         // Pop one at a time
@@ -126,9 +170,13 @@ public class Render : MonoBehaviour
             Debug.Log("No more case, terminating experiment");
         }
         HW.transform.localScale = new Vector3(r*2, h, r*2); 
+        HW.transform.position = new Vector3(U.transform.position.x, h, U.transform.position.z) - U.transform.right * (r + d);
 
-        L_hat = Vector3.Cross(U.transform.forward,Vector3.up);
-        HW.transform.position = new Vector3(U.transform.position.x, h, U.transform.position.z) + L_hat * (r + d);
+        /// Start and End Location Indicator Positioning
+        SL.transform.position = new Vector3(U.transform.position.x, 0, U.transform.position.z);
+        
+        Vector3 SV = SL.transform.position-new Vector3(HW.transform.position.x,0,HW.transform.position.z);
+        stheta = (Mathf.Atan2(SV.z, SV.x) + 2 * Mathf.PI) % (2 * Mathf.PI);
     }
 
     void VisionRendering()
@@ -145,13 +193,13 @@ public class Render : MonoBehaviour
 
         // 3. Get anti-clockwize Tangent Unit Vector on the surface of Haptic Wall at Projected Point using absolute Up direction, and Projected Vector.
         T_hat = Vector3.Cross(Vector3.up, V_norm);
-        Debug.Log($"T_hat: {T_hat}");
 
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to anti-clockwize Tangent Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
         VW.transform.rotation = Quaternion.LookRotation(V_norm, Vector3.up);
         VF.transform.rotation = VW.transform.rotation;
+
         // 5. Get User Relative Angle from z component and x component of Project Vector in 0 to 2PI scale.
-        theta = (Mathf.Atan2(V_norm.z, V_norm.x) + 2 * Mathf.PI) % (2 * Mathf.PI);
+        theta = (Mathf.Atan2(V_norm.z, V_norm.x) + 2 * Mathf.PI) % (2 * Mathf.PI) - stheta;
 
         // 6. Get User Travel Distance from User Relative Angle multiplied by sum of Radius of Haptic Wall and Initial Distance.
         td = theta * (r + d);
@@ -182,49 +230,29 @@ public class Render : MonoBehaviour
     } 
 
     void HapticRendering() {
+        /// Visual Hand and Sphere Rendering
+        // 1. if Acutal Left Hand is inside Haptic Wall, then Haptic Left Hand position is projected on closet point on surface of Haptic Wall from Actual Left Hand position.
+        // Else, Haptic Left Hand stays at Actual Left Hand position.
         Vector3 AW = new Vector3(AH.PointerPose.position.x,0,AH.PointerPose.position.z) - new Vector3(HW.transform.position.x,0,HW.transform.position.z);
         if (AW.magnitude > r) {
             HS.transform.position = AH.PointerPose.position;
         } else {
             HS.transform.position = new Vector3(HW.transform.position.x, AH.PointerPose.position.y, HW.transform.position.z) + AW.normalized * r;
         }
+        
+        // 2. After Haptic Left Hand calculation done, distance between Actual Left Hand and Haptic Left Hand will be sent to my device to display force based on its magnitude.
+        SendServoPosition((HS.transform.position - AS.transform.position).magnitude);
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        TestingObjectsViewUpdate();
-        VW.SetActive(ViewVisualWall);
-
-        VisionRendering();
-        HapticRendering();
-        // SendServoPosition(handProjection());
-    }
-
-
-    private void TestingObjectsViewUpdate() {
-        if (ViewTestingObjects) {
-            HW.layer = LayerMask.NameToLayer("Default");
-            AS.layer = LayerMask.NameToLayer("Default");
-            VS.layer = LayerMask.NameToLayer("Default");
-            HS.layer = LayerMask.NameToLayer("Default");
-        } else {
-            HW.layer = LayerMask.NameToLayer("TestingObject");
-            AS.layer = LayerMask.NameToLayer("TestingObject");
-            VS.layer = LayerMask.NameToLayer("TestingObject");
-            HS.layer = LayerMask.NameToLayer("TestingObject");
-        }
-    }
-
-    private void SendServoPosition(float handProjectionResult) {
+    private void SendServoPosition(float diff) {
         int calibrate = 50;
         int servoPosition = 125 + calibrate;
         if (WithServo) {
-            if (handProjectionResult < 0.06f && handProjectionResult > 0f)
+            if (0.0f < diff && diff < 0.06f)
             {
-                servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, handProjectionResult / 0.06f)) + calibrate;
+                servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, diff / 0.06f)) + calibrate;
             }
-            else if (handProjectionResult >= 0.04f)
+            else
             {
                 servoPosition = 85 + calibrate;
             }
@@ -232,70 +260,4 @@ public class Render : MonoBehaviour
         byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
         udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
     }
-
-    // private void ApplyRadiusChange() {
-    //     HW.transform.localScale = new Vector3(radius * 2, HW.transform.localScale.y, radius * 2);
-    //     HW.transform.position = step_start_position - step_start_right * (radius + d) + new Vector3(0,2,0);
-    //     Vector3 playerPosition = U.transform.position;
-    //     playerPosition.y = 0;
-    //     Vector3 wallCenter = HW.transform.position;
-    //     wallCenter.y = 0;
-    //     Vector3 playerToWall = playerPosition - wallCenter;
-    //     Vector3 wallNormal = HW.transform.up;
-    //     VW.transform.position = HW.transform.position + playerToWall.normalized * radius;
-    //     VW.transform.rotation = Quaternion.LookRotation(-wallNormal, playerToWall.normalized);
-
-    //     // Calculate wall shift
-    //     float wallAngle = Mathf.Atan2(playerToWall.z, playerToWall.x);  // calculate angle of player from real wall
-    //     if (playerToWall.x < 0f) {                                      // cast it to (0, 2PI) System
-    //         wallAngle += Mathf.PI * 2f;
-    //     }
-
-    //     // if user walked for required distance for the step
-    //     // and all screnes are off
-    //     // turn on the survery screen
-    //     if (Vector3.Distance(playerPosition, step_start_position) > step_meter && !EnjoymentSurveyScreen.activeInHierarchy && !RealismSurveyScreen.activeInHierarchy && !PresenceSurveyScreen.activeInHierarchy && !StraightnessSurveyScreen.activeInHierarchy && !EndingScreen.activeInHierarchy) {
-    //         StraightnessSurveyScreen.SetActive(true);
-    //     }
-
-    //     // Apply wall shift
-    //     Vector3 visualWallRight = Vector3.Cross(playerToWall.normalized, wallNormal);                   // get the shifting direction
-    //     VW.transform.position += visualWallRight * (1 - wallAngle) * (radius + d);  // Apply Shift to Opposite Direction of Walking in circunstance scale
-    // }
-
-    // private float handProjection() {
-    //     Vector3 realHandPosition = AH.PointerPose.position;
-    //     Vector3 HWCenter = HW.transform.position; 
-    //     HWCenter.y = 0;
-    //     AS.transform.position = realHandPosition;
-    //     Vector3 realHand2DPosition = new Vector3(realHandPosition.x,0,realHandPosition.z);
-    //     Vector3 handToWallCenter = realHand2DPosition - HWCenter;
-
-    //     if (Mathf.Abs(handToWallCenter.magnitude) <= radius)
-    //     {
-    //         Vector3 handProjectedOnWall = HWCenter + (handToWallCenter.normalized * radius);
-    //         handProjectedOnWall.y = realHandPosition.y;
-    //         VS.transform.position = handProjectedOnWall;
-    //     } else {
-    //         VS.transform.position = realHandPosition;
-    //     }
-    //     if (Mathf.Abs(handToWallCenter.magnitude) <= radius - 0.03f)
-    //     {
-    //         Vector3 handProjectedOnWall = HWCenter + (handToWallCenter.normalized * (radius - 0.03f));
-    //         handProjectedOnWall.y = realHandPosition.y;
-    //         AH.UseRenderPosition = UseRenderPosition;
-    //         AH.RenderPosition = handProjectedOnWall;
-    //     } else {
-    //         AH.UseRenderPosition = false;
-    //     }
-    //     float magnitude = (AS.transform.position - VS.transform.position).magnitude; 
-        
-    //     if (Mathf.Approximately(magnitude, 0f)) {
-    //         return 0f;
-    //     } else {
-    //         return magnitude;
-    //     }
-
-    // }
-
 }
