@@ -227,6 +227,12 @@ public class Render : MonoBehaviour
             AS.transform.position = AH.PointerPose.position;
             VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec,V_norm)*V_norm;
         }
+
+        EL.transform.position = new Vector3(HW.transform.position.x,0,HW.transform.position.z) + new Vector3(Mathf.Cos(stheta+p/(r+d)), 0, Mathf.Sin(stheta+p/(r+d))) * (r+d);
+        Vector3 ELP_vec = EL.transform.position - P;
+        if (Vector3.Dot(ELP_vec,V_norm) < 0) {
+            EL.transform.position = EL.transform.position - (Vector3.Dot(ELP_vec,V_norm) + d) * V_norm; 
+        }
     } 
 
     void HapticRendering() {
