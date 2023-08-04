@@ -7,18 +7,20 @@
 2. Visual manipulation with kinesthetic force applied (RDW + stimuli)
 
 # Initialization Algorithm
-1. **Haptic Wall** $HW$, a cylindrical wall with **Radius** $r$ on the **Left** $\hat{L}$ of the **User** $U$, where **Initial Comfortable Distance** $d$ between surface of the wall with the **User** is just enough to touch the wall with comfort. Absolute **Up** $\hat{y}$ is given, and **Front** $\hat{F}$ of the **User** is measured.
+1. **Haptic Wall** $HW$, a cylindrical wall with **Radius** $r$ and **Height** $h$ on the **Left** $\hat{L}$ of the **User** $U$, where **Initial Comfortable Distance** $d$ between surface of the wall with the **User** is just enough to touch the wall with comfort. **Front** $\hat{F}$ of the **User** is measured, and absolute **Up** $\hat{y}$ is given.
 $$\hat{L}=\hat{F}\times\hat{y} $$
-$$HW =U+(r+d)\cdot\hat{L} $$
+$$HW =\langle U_x,h,U_z \rangle+(r+d)\cdot\hat{L} $$
 
 # Vision Rendering Algorithm
 1. **Visual Wall** $VW$, infinite straight wall on the surface of the **Haptic Wall** and left of the **User**, and **Visual Floor** $VF$ where its transformation is calculated by:
     1. Get **Projected Vector** $\vec{V}$ from center of **Haptic Wall** $HW$ to position of **User** $U$
     $$\vec{V} = U - HW$$
+    $$\vec{V} = \langle \vec{V}_x,0,\vec{V}_z \rangle$$
     2. Get **Projected Point** $P$ by projecting **Projected Vector** $\vec{V}$ from center of **Haptic Wall** $HW$ in **Radius** $r$ magnitude.
     $$\hat{V} = \frac{\vec{V}}{\left|V\right|}$$
     $$P = HW+r\cdot\hat{V}$$ 
-    3. Get anti-clockwize **Tangent Unit Vector** $\hat{T}$ on the surface of **Haptic Wall** at **Projected Point** using absolute **Up** $\hat{y}$ direction and **Projected Vector** $\vec{V}$.
+    $$P = \langle P_x,0,P_z \rangle$$
+    3. Get anti-clockwize **Tangent Unit Vector** $\hat{T}$ on the surface of **Haptic Wall** at **Projected Point** using **Projected Vector** $\vec{V}$, and absolute **Up** $\hat{y}$ direction.
     $$\hat{T} = \hat{V}\times\hat{y}$$  
     
     4. Match **Quaternion** $Q_{VW}$ of **Visual Wall** $VW$ and **Quaternion** $Q_{VF}$ of **Visual Floor** $VF$ to anti-clockwize **Tangent Unit Vector** $\hat{T}$ direction using Unity $Quaternion.LookRotation$ method. \\\\ Please Expand this to actual formula instead of Unity predefinded method
@@ -28,8 +30,8 @@ $$HW =U+(r+d)\cdot\hat{L} $$
     $$\theta = (arctan2(\hat{V_z},\hat{V_x})+2\pi)\bmod(2\pi)$$
     6. Get **User Travel Distance** $td$ from **User Relative Angle** $\theta$ multiplied by sum of **Radius** $r$ of **Haptic Wall** and **Initial Distance** $d$.
     $$td = \theta\cdot(r + d)$$
-    7. Get the **Shifting Direction Vector** $\hat{S}$, which is oppsite to expected walking direction of **User**, which is same as clockwize **Tangent Unit Vector** $-\hat{T}$, in **Travel Distance Magnitude** $td$.
-    $$S = -td\cdot\hat{T}$$
+    7. Get the **Shifting Direction Vector** $\vec{S}$, which is oppsite to expected walking direction of **User**, which is same as clockwize **Tangent Unit Vector** $-\hat{T}$, in **Travel Distance Magnitude** $td$.
+    $$\vec{S} = -td\cdot\hat{T}$$
 
     8. Set **Virtual Wall** $VW$ and **Visual Floor** $VF$ position to where **Projected Point** $P$ is shifted with **Shifting Direction Vector** $\vec{S}$. so the user is feeling as if they are walking on straight path, event though they were walking along surface of **Haptic Wall**.
     $$VW = P - \vec{S}$$
