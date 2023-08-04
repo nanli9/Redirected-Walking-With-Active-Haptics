@@ -69,4 +69,5 @@ $$HW =\langle U_x,h,U_z \rangle+(r+d)\cdot\hat{L} $$
 1. When User crosses the zero degree to 2pi degree in backward direction, the texture flips
 2. HW seems to be too rough, mismatch of surface of HW and HS might be result of it
 3. Interaction Screens with Image not yet implemented
-4. Start and Destination not yet implemented
+4. Destination need to be projected on based on Visual Wall, not only HW
+5. 
