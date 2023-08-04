@@ -180,9 +180,9 @@ public class OVRHand : MonoBehaviour,
 		{
 			OVRPlugin.Posef RootPose = _handState.RootPose; 
 			if (UseRenderPosition) {
-				RootPose.Position.x = RenderPosition.x + (RootPose.Position.x - PointerPose.position.x);
-				RootPose.Position.y = RenderPosition.y + (RootPose.Position.y - PointerPose.position.y);
-				RootPose.Position.z = -RenderPosition.z + (RootPose.Position.z + PointerPose.position.z);
+				RootPose.Position.x = RenderPosition.x + (RootPose.Position.x - PointerPose.localPosition.x);
+				RootPose.Position.y = RenderPosition.y + (RootPose.Position.y - PointerPose.localPosition.y);
+				RootPose.Position.z = -RenderPosition.z + (RootPose.Position.z + PointerPose.localPosition.z);
 			}   
 			data.RootPose = RootPose;
 			data.RootScale = _handState.HandScale;

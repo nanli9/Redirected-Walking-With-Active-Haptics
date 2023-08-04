@@ -133,6 +133,7 @@ public class Render : MonoBehaviour
 
     void VisionRendering()
     {
+        /// Visual Wall and Visual Floor Rendering
         // 1. Get Projected Vector from center of Haptic Wall to position of User
         V_vec = U.transform.position - HW.transform.position;
         V_vec = new Vector3(V_vec.x, 0, V_vec.z);
@@ -143,13 +144,12 @@ public class Render : MonoBehaviour
         P = new Vector3(P.x, 0, P.z);
 
         // 3. Get anti-clockwize Tangent Unit Vector on the surface of Haptic Wall at Projected Point using absolute Up direction, and Projected Vector.
-        T_hat = Vector3.Cross(V_norm, Vector3.up);
+        T_hat = Vector3.Cross(Vector3.up, V_norm);
         Debug.Log($"T_hat: {T_hat}");
 
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to anti-clockwize Tangent Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
-        VW.transform.rotation = Quaternion.LookRotation(T_hat, Vector3.up);
+        VW.transform.rotation = Quaternion.LookRotation(V_norm, Vector3.up);
         VF.transform.rotation = VW.transform.rotation;
-
         // 5. Get User Relative Angle from z component and x component of Project Vector in 0 to 2PI scale.
         theta = (Mathf.Atan2(V_norm.z, V_norm.x) + 2 * Mathf.PI) % (2 * Mathf.PI);
 
@@ -157,13 +157,38 @@ public class Render : MonoBehaviour
         td = theta * (r + d);
 
         // 7. Get the Shifting Direction Vector, whcihc is oppsite to expected walking direction of User, which is same as clockwize Tangent Unit Vector, in Travel Distance Magnitude.
-        S_vec = - td * T_hat;
+        S_vec = td * T_hat;
 
         // 8. Set Virtual Wall and Visual Floor position to where Projected Point is shifted with Shifting Direction Vector. so the user is feeling as if they are walking on straight path, event though they were walking along surface of Haptic Wall.
-        VW.transform.position = P - S_vec;
-        VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
+        VW.transform.position = P + S_vec;
         VF.transform.position = VW.transform.position;
+        VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
+
+        /// Visual Hand and Sphere Rendering
+        // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
+        // Else, Visual Left Hand stays at Actual Left Hand position.
+        Vector3 AP_vec = new Vector3(AH.PointerPose.localPosition.x,0,AH.PointerPose.localPosition.z) - P;
+        AH.UseRenderPosition = UseRenderPosition;
+        if (Vector3.Dot(AP_vec,V_norm) > 0) {
+            AH.RenderPosition = AH.PointerPose.localPosition;
+            AS.transform.position = AH.PointerPose.position;
+            VS.transform.position = AH.PointerPose.position;
+        }
+        else {
+            AH.RenderPosition = AH.PointerPose.localPosition - Vector3.Dot(AP_vec,V_norm)*V_norm;    
+            AS.transform.position = AH.PointerPose.position;
+            VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec,V_norm)*V_norm;
+        }
     } 
+
+    void HapticRendering() {
+        Vector3 AW = new Vector3(AH.PointerPose.position.x,0,AH.PointerPose.position.z) - new Vector3(HW.transform.position.x,0,HW.transform.position.z);
+        if (AW.magnitude > r) {
+            HS.transform.position = AH.PointerPose.position;
+        } else {
+            HS.transform.position = new Vector3(HW.transform.position.x, AH.PointerPose.position.y, HW.transform.position.z) + AW.normalized * r;
+        }
+    }
 
     // Update is called once per frame
     void Update()
@@ -172,7 +197,7 @@ public class Render : MonoBehaviour
         VW.SetActive(ViewVisualWall);
 
         VisionRendering();
-
+        HapticRendering();
         // SendServoPosition(handProjection());
     }
 
@@ -182,29 +207,31 @@ public class Render : MonoBehaviour
             HW.layer = LayerMask.NameToLayer("Default");
             AS.layer = LayerMask.NameToLayer("Default");
             VS.layer = LayerMask.NameToLayer("Default");
+            HS.layer = LayerMask.NameToLayer("Default");
         } else {
             HW.layer = LayerMask.NameToLayer("TestingObject");
             AS.layer = LayerMask.NameToLayer("TestingObject");
             VS.layer = LayerMask.NameToLayer("TestingObject");
+            HS.layer = LayerMask.NameToLayer("TestingObject");
         }
     }
 
-    // private void SendServoPosition(float handProjectionResult) {
-    //     int calibrate = 50;
-    //     int servoPosition = 125 + calibrate;
-    //     if (WithServo) {
-    //         if (handProjectionResult < 0.06f && handProjectionResult > 0f)
-    //         {
-    //             servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, handProjectionResult / 0.06f)) + calibrate;
-    //         }
-    //         else if (handProjectionResult >= 0.04f)
-    //         {
-    //             servoPosition = 85 + calibrate;
-    //         }
-    //     }
-    //     byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
-    //     udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
-    // }
+    private void SendServoPosition(float handProjectionResult) {
+        int calibrate = 50;
+        int servoPosition = 125 + calibrate;
+        if (WithServo) {
+            if (handProjectionResult < 0.06f && handProjectionResult > 0f)
+            {
+                servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, handProjectionResult / 0.06f)) + calibrate;
+            }
+            else if (handProjectionResult >= 0.04f)
+            {
+                servoPosition = 85 + calibrate;
+            }
+        }
+        byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
+        udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
+    }
 
     // private void ApplyRadiusChange() {
     //     HW.transform.localScale = new Vector3(radius * 2, HW.transform.localScale.y, radius * 2);

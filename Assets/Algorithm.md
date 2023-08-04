@@ -36,6 +36,7 @@ $$HW =\langle U_x,h,U_z \rangle+(r+d)\cdot\hat{L} $$
     8. Set **Virtual Wall** $VW$ and **Visual Floor** $VF$ position to where **Projected Point** $P$ is shifted with **Shifting Direction Vector** $\vec{S}$. so the user is feeling as if they are walking on straight path, event though they were walking along surface of **Haptic Wall**.
     $$VW = P - \vec{S}$$
     $$VF = VW$$ 
+    $$VW = \langle VW_x,h/2,VW_z \rangle$$
 
 2. **Visual Left Hand**, calculated after **Visual Wall** calculation done:
     1. if **Visual Wall** $VW$ is in between **Actual Left Hand** $AH$ and **User** $U$ position, then **Visual Left Hand** $VH$ position is projected on closet point on surface of **Visual Wall** $VW$ from **Actual Left Hand** $AH$ position.
@@ -44,8 +45,8 @@ $$HW =\langle U_x,h,U_z \rangle+(r+d)\cdot\hat{L} $$
     \vec{AP} = (AH - P)
     $$
     $$VH=\begin{cases}
-        AH & \text{if } \hat{\vec{AP} - \vec{AP} \cdot \hat{T}} == \hat{V} \\
-        AH - \vec{AP} \cdot \hat{V} & \text{otherwise} 
+        AH & \text{if } (\vec{AP} \cdot \hat{V}) > 0 \\
+        AH - \left(\vec{AP} \cdot \hat{V}\right) \hat{V} & \text{otherwise} 
     \end{cases}$$
 
 # Haptic Rendering Algorithm
