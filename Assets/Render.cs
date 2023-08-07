@@ -59,7 +59,7 @@ public class Render : MonoBehaviour
     public float p = 5f;
     /// <summary> Allowed Radius </summary>
     // private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f}; 
-    private static readonly float[] _r = {10.0f,17.0f,20.0f}; 
+    private static readonly float[] _r = {7.0f,14.0f,21.0f}; 
     /// <summary> [Placeholder] Current Radius </summary>
     private float r;
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
