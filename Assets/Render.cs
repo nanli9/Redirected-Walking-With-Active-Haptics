@@ -65,14 +65,15 @@ public class Render : MonoBehaviour
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
     private Vector3 V_vec;
     /// <summary> [Placeholder] Sum Of Travel Angle </summary>
-    public float theta;
+    private float theta;
     /// <summary> [Placeholder] Relative Angle from Current Projected Vector </summary>
     private float ctheta;
     /// <summary> [Placeholder] Relative Angle from Previous Projected Vector</summary>
     private float ptheta;
-    public float diff;
+    /// <summary> [Placeholder] Difference Between Current Relative Angle and Previous Relative Angle</summary>
+    private float diff;
     /// <summary> [Placeholder] Travel Distance </summary>
-    public float td;
+    private float td;
     /// <summary> [Placeholder] Projected Point On The Surface Of Haptic Wall(HW) Towards User(U)</summary>
     private Vector3 P;
     /// <summary> [Placeholder] Tangent Unit Vector On The Surface Of Haptic Wall(HW) Towards User(U) </summary>
