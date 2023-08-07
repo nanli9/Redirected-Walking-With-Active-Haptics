@@ -64,12 +64,15 @@ public class Render : MonoBehaviour
     private float r;
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
     private Vector3 V_vec;
-    /// <summary> [Placeholder] Relative Angle from Projected Vector </summary>
-    private float theta;
+    /// <summary> [Placeholder] Sum Of Travel Angle </summary>
+    public float theta;
+    /// <summary> [Placeholder] Relative Angle from Current Projected Vector </summary>
+    private float ctheta;
     /// <summary> [Placeholder] Relative Angle from Previous Projected Vector</summary>
-    private float stheta;
+    private float ptheta;
+    public float diff;
     /// <summary> [Placeholder] Travel Distance </summary>
-    private float td;
+    public float td;
     /// <summary> [Placeholder] Projected Point On The Surface Of Haptic Wall(HW) Towards User(U)</summary>
     private Vector3 P;
     /// <summary> [Placeholder] Tangent Unit Vector On The Surface Of Haptic Wall(HW) Towards User(U) </summary>
@@ -148,13 +151,13 @@ public class Render : MonoBehaviour
 
         // Rendering Algorithm Update
         VisionRendering();  
-        HapticRendering();  // Dependent on Vision Rendering Algorithm
-
         if (td > p && td - p < 0.1f) {
             // Should have questionaire, which calls Initialization() after questionaire is done.
             // For now, just call Initialization() directly.
             Initialization();
+            return;
         }
+        HapticRendering();  // Dependent on Vision Rendering Algorithm
     }
 
     void Initialization()
@@ -174,8 +177,9 @@ public class Render : MonoBehaviour
             HW.transform.localScale = new Vector3(r*2, h, r*2); 
             HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.transform.right * (r + d);
 
-            stheta = Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z); 
-            // stheta = (Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z) + 2 * Mathf.PI) % (2 * Mathf.PI); 
+            // Reset Sum of Travel Angle and Relative Angle from Previous Projected Vector
+            theta = 0;  
+            ptheta = Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z); 
         } else {
             Debug.Log("No more case, terminating experiment");
             // Application.Quit();
@@ -192,21 +196,24 @@ public class Render : MonoBehaviour
         // 2. Get Projected Point by projecting Projected Vector from center of Haptic Wall in Radius magnitude.
         P = new Vector3(HW.transform.position.x, 0, HW.transform.position.z) + V_vec.normalized * r;
 
-        // 3. Get anti-clockwize Tangent Unit Vector on the surface of Haptic Wall at Projected Point using absolute Up direction, and Projected Vector.
+        // 3. Get clockwize Tangent Unit Vector on the surface of Haptic Wall at Projected Point using absolute Up direction, and Projected Vector.
         T_hat = Vector3.Cross(Vector3.up, V_vec.normalized);
 
-        // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to anti-clockwize Tangent Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
+        // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to Projected Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
         VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
         VF.transform.rotation = VW.transform.rotation;
 
-        // 5. Get User Relative Angle from z component and x component of Project Vector in 0 to 2PI scale.
-        // theta = (Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x) - stheta + 2 * Mathf.PI) % (2 * Mathf.PI) - Mathf.PI;
-        theta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x) - stheta;
+        // 5. Get User Relative Angle from z component and x component of Project Vector in -PI to PI scale.
+        ctheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
+        diff = ctheta - ptheta;
+        diff += (diff > Mathf.PI) ? -2 * Mathf.PI : (diff < -Mathf.PI) ?  2 * Mathf.PI : 0; // Convert to -PI to PI scale
+        theta += diff;
+        ptheta = ctheta;
 
-        // 6. Get User Travel Distance from User Relative Angle multiplied by sum of Radius of Haptic Wall and Initial Distance.
+        // 6. Get User Travel Distance from Total Traveled Angle multiplied by sum of Radius of Haptic Wall and Initial Distance.
         td = theta * (r + d);
 
-        // 7. Get the Shifting Direction Vector, whcihc is oppsite to expected walking direction of User, which is same as clockwize Tangent Unit Vector, in Travel Distance Magnitude.
+        // 7. Get the Shifting Direction Vector, which is oppsite to expected walking direction of User, which is same as clockwize Tangent Unit Vector, in Travel Distance Magnitude.
         S_vec = td * T_hat;
 
         // 8. Set Virtual Wall and Visual Floor position to where Projected Point is shifted with Shifting Direction Vector. so the user is feeling as if they are walking on straight path, event though they were walking along surface of Haptic Wall.
@@ -214,12 +221,11 @@ public class Render : MonoBehaviour
         VF.transform.position = VW.transform.position;
         VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
 
+        // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
         SL.transform.position = P + V_vec.normalized * d + S_vec;
+
+        // 10. Set End Indicator position to anti-clockwize Tangent Unit Vector direction with path magnitude from Start Indicator.
         EL.transform.position = SL.transform.position - p * T_hat;
-        // For Debugging
-        // EL.transform.position = new Vector3(EL.transform.position.x, Cases.Count, EL.transform.position.z);
-
-
 
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
@@ -227,34 +233,17 @@ public class Render : MonoBehaviour
         Vector3 AP_vec = new Vector3(AH.PointerPose.localPosition.x,0,AH.PointerPose.localPosition.z) - P;
         AH.UseRenderPosition = UseRenderPosition;
         if (Vector3.Dot(AP_vec,V_vec.normalized) > 0) {
+            // AH.RenderPosition is VH position
             AH.RenderPosition = AH.PointerPose.localPosition;
             AS.transform.position = AH.PointerPose.position;
             VS.transform.position = AH.PointerPose.position;
         }
         else {
+            // AH.RenderPosition is VH position
             AH.RenderPosition = AH.PointerPose.localPosition - Vector3.Dot(AP_vec,V_vec.normalized)*V_vec.normalized;    
             AS.transform.position = AH.PointerPose.position;
             VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec,V_vec.normalized)*V_vec.normalized;
         }
-
-        // For Debugging
-        // VS.transform.position = new Vector3(HW.transform.position.x,h/4, HW.transform.position.z) + new Vector3(Mathf.Cos(stheta), 0, Mathf.Sin(stheta)) * (r+d);
-        
-
-
-
-        
-        // SL.transform.position = new Vector3(HW.transform.position.x,0,HW.transform.position.z) + new Vector3(Mathf.Cos(stheta), 0, Mathf.Sin(stheta)) * (r+d);
-        // Vector3 SLP_vec = SL.transform.position - P;
-        // if (Vector3.Dot(SLP_vec,V_norm) < 0) {
-        //     SL.transform.position = SL.transform.position - (Vector3.Dot(SLP_vec,V_norm) + d) * V_norm; 
-        // }
-
-        // EL.transform.position = new Vector3(HW.transform.position.x,0,HW.transform.position.z) + new Vector3(Mathf.Cos(stheta+p/(r+d)), 0, Mathf.Sin(stheta+p/(r+d))) * (r+d);
-        // Vector3 ELP_vec = EL.transform.position - P;
-        // if (Vector3.Dot(ELP_vec,V_norm) < 0) {
-        //     EL.transform.position = EL.transform.position - (Vector3.Dot(ELP_vec,V_norm) + d) * V_norm; 
-        // }
     } 
 
     void HapticRendering() {
