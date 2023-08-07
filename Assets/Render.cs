@@ -124,7 +124,7 @@ public class Render : MonoBehaviour
         Cases = new List<Tuple<float, bool>>();
         foreach (var radius in _r)
         {
-            // Cases.Add(new Tuple<float, bool>(radius, true));
+            Cases.Add(new Tuple<float, bool>(radius, true));
             Cases.Add(new Tuple<float, bool>(radius, false));
         }
         // Shuffle Cases
@@ -133,7 +133,7 @@ public class Render : MonoBehaviour
         // Init UDP
         udpClient = new UdpClient(localPort);
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
-        Debug.Log("UDP server started");
+        Debug.Log("UDP Client started");
     }
 
     void Start() 
@@ -269,7 +269,7 @@ public class Render : MonoBehaviour
             {
                 servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, diff / 0.06f)) + calibrate;
             }
-            else
+            else if (0.06f <= diff)
             {
                 servoPosition = 85 + calibrate;
             }
