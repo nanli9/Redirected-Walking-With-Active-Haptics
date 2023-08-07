@@ -231,6 +231,7 @@ public class Render : MonoBehaviour
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
         // Else, Visual Left Hand stays at Actual Left Hand position.
         Vector3 AP_vec = new Vector3(AH.PointerPose.localPosition.x,0,AH.PointerPose.localPosition.z) - P;
+        AP_vec += V_vec.normalized * 0.04f;
         AH.UseRenderPosition = UseRenderPosition;
         if (Vector3.Dot(AP_vec,V_vec.normalized) > 0) {
             // AH.RenderPosition is VH position

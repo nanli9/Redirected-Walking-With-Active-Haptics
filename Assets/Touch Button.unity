@@ -3877,10 +3877,13 @@ MonoBehaviour:
   VF: {fileID: 1667088895}
   SL: {fileID: 682529661}
   EL: {fileID: 653637867}
-  d: 0.42
+  d: 0.62
   p: 1.2
+  theta: 0
+  diff: 0
+  td: 0
   UseRenderPosition: 1
-  ViewTestingObjects: 1
+  ViewTestingObjects: 0
   ViewVisualWall: 1
 --- !u!4 &344611800
 Transform:
