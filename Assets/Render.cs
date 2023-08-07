@@ -27,8 +27,8 @@ public static class IListExtensions {
 
 public class Render : MonoBehaviour
 {
-    /// <summary> User(Center Eye Anchor) </summary>
-    public GameObject U;
+    /// <summary> User(OVRCameraRig.CenterEyeAnchor) </summary>
+    public OVRCameraRig U;
     /// <summary> Actual Hand </summary>
     public OVRHand AH;
     /// <summary> Right Hand </summary>
@@ -58,18 +58,15 @@ public class Render : MonoBehaviour
     /// <summary> Path User Required To Travel </summary>
     public float p = 5f;
     /// <summary> Allowed Radius </summary>
-    private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f}; 
+    // private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f}; 
+    private static readonly float[] _r = {10.0f,17.0f,20.0f}; 
     /// <summary> [Placeholder] Current Radius </summary>
     private float r;
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
     private Vector3 V_vec;
-    /// <summary> [Placeholder] Normalized Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
-    private Vector3 V_norm;
     /// <summary> [Placeholder] Relative Angle from Projected Vector </summary>
     private float theta;
-    /// <summary> [Placeholder] Initial Projected Vector From Center Of Actual Wall(AW) to Start Location (SL)</summary>
-    private Vector3 SV;
-    /// <summary> [Placeholder] Relative Angle from Initial Projected Vector</summary>
+    /// <summary> [Placeholder] Relative Angle from Previous Projected Vector</summary>
     private float stheta;
     /// <summary> [Placeholder] Travel Distance </summary>
     private float td;
@@ -82,7 +79,7 @@ public class Render : MonoBehaviour
     /// <summary> Remote Servo Condition Switch </summary>
     private bool WithServo;
     
-    private List<Tuple<float, bool>> Cases = new List<Tuple<float, bool>>();
+    private List<Tuple<float, bool>> Cases;
 
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
@@ -118,24 +115,28 @@ public class Render : MonoBehaviour
     /**
       *  Start is called before the first frame update
       */
-    void Start()
+    void Awake()
     {
         // Create Cases
+        Cases = new List<Tuple<float, bool>>();
         foreach (var radius in _r)
         {
-            Cases.Add(new Tuple<float, bool>(radius, true));
+            // Cases.Add(new Tuple<float, bool>(radius, true));
             Cases.Add(new Tuple<float, bool>(radius, false));
         }
         // Shuffle Cases
         Cases.Shuffle();
 
-        // Init Environment
-        Initialization();
-
         // Init UDP
         udpClient = new UdpClient(localPort);
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
         Debug.Log("UDP server started");
+    }
+
+    void Start() 
+    {
+        // Init Variables
+        Initialization();
     }
 
     // Update is called once per frame
@@ -149,7 +150,7 @@ public class Render : MonoBehaviour
         VisionRendering();  
         HapticRendering();  // Dependent on Vision Rendering Algorithm
 
-        if (td > p) {
+        if (td > p && td - p < 0.1f) {
             // Should have questionaire, which calls Initialization() after questionaire is done.
             // For now, just call Initialization() directly.
             Initialization();
@@ -158,48 +159,49 @@ public class Render : MonoBehaviour
 
     void Initialization()
     {
+        // for (int i = 0; i < Cases.Count; i++)
+        // {
+        //     Debug.Log($"Case {i}: Radius: {Cases[i].Item1}, On/Off: {Cases[i].Item2}");
+        // }
         // Pop one at a time
         if (Cases.Count > 0)
         {
             var c = Cases[0];
             r = c.Item1;
             WithServo = c.Item2;
-            Debug.Log($"Radius: {r}, On/Off: {WithServo}");
             Cases.RemoveAt(0);
+            // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
+            HW.transform.localScale = new Vector3(r*2, h, r*2); 
+            HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.transform.right * (r + d);
+
+            stheta = Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z); 
+            // stheta = (Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z) + 2 * Mathf.PI) % (2 * Mathf.PI); 
         } else {
             Debug.Log("No more case, terminating experiment");
+            // Application.Quit();
+            VW.SetActive(false);
         }
-        HW.transform.localScale = new Vector3(r*2, h, r*2); 
-        HW.transform.position = new Vector3(U.transform.position.x, h, U.transform.position.z) - U.transform.right * (r + d);
-
-        /// Start and End Location Indicator Positioning
-        SL.transform.position = new Vector3(U.transform.position.x, 0, U.transform.position.z);
-        
-        Vector3 SV = SL.transform.position-new Vector3(HW.transform.position.x,0,HW.transform.position.z);
-        stheta = (Mathf.Atan2(SV.z, SV.x) + 2 * Mathf.PI) % (2 * Mathf.PI);
-    }
+ }
 
     void VisionRendering()
     {
         /// Visual Wall and Visual Floor Rendering
         // 1. Get Projected Vector from center of Haptic Wall to position of User
-        V_vec = U.transform.position - HW.transform.position;
-        V_vec = new Vector3(V_vec.x, 0, V_vec.z);
+        V_vec = new Vector3(U.centerEyeAnchor.transform.position.x - HW.transform.position.x, 0, U.centerEyeAnchor.transform.position.z - HW.transform.position.z);
 
         // 2. Get Projected Point by projecting Projected Vector from center of Haptic Wall in Radius magnitude.
-        V_norm = V_vec / V_vec.magnitude;
-        P = HW.transform.position + V_norm * r;
-        P = new Vector3(P.x, 0, P.z);
+        P = new Vector3(HW.transform.position.x, 0, HW.transform.position.z) + V_vec.normalized * r;
 
         // 3. Get anti-clockwize Tangent Unit Vector on the surface of Haptic Wall at Projected Point using absolute Up direction, and Projected Vector.
-        T_hat = Vector3.Cross(Vector3.up, V_norm);
+        T_hat = Vector3.Cross(Vector3.up, V_vec.normalized);
 
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to anti-clockwize Tangent Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
-        VW.transform.rotation = Quaternion.LookRotation(V_norm, Vector3.up);
+        VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
         VF.transform.rotation = VW.transform.rotation;
 
         // 5. Get User Relative Angle from z component and x component of Project Vector in 0 to 2PI scale.
-        theta = (Mathf.Atan2(V_norm.z, V_norm.x) + 2 * Mathf.PI) % (2 * Mathf.PI) - stheta;
+        // theta = (Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x) - stheta + 2 * Mathf.PI) % (2 * Mathf.PI) - Mathf.PI;
+        theta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x) - stheta;
 
         // 6. Get User Travel Distance from User Relative Angle multiplied by sum of Radius of Haptic Wall and Initial Distance.
         td = theta * (r + d);
@@ -212,27 +214,47 @@ public class Render : MonoBehaviour
         VF.transform.position = VW.transform.position;
         VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
 
+        SL.transform.position = P + V_vec.normalized * d + S_vec;
+        EL.transform.position = SL.transform.position - p * T_hat;
+        // For Debugging
+        // EL.transform.position = new Vector3(EL.transform.position.x, Cases.Count, EL.transform.position.z);
+
+
+
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
         // Else, Visual Left Hand stays at Actual Left Hand position.
         Vector3 AP_vec = new Vector3(AH.PointerPose.localPosition.x,0,AH.PointerPose.localPosition.z) - P;
         AH.UseRenderPosition = UseRenderPosition;
-        if (Vector3.Dot(AP_vec,V_norm) > 0) {
+        if (Vector3.Dot(AP_vec,V_vec.normalized) > 0) {
             AH.RenderPosition = AH.PointerPose.localPosition;
             AS.transform.position = AH.PointerPose.position;
             VS.transform.position = AH.PointerPose.position;
         }
         else {
-            AH.RenderPosition = AH.PointerPose.localPosition - Vector3.Dot(AP_vec,V_norm)*V_norm;    
+            AH.RenderPosition = AH.PointerPose.localPosition - Vector3.Dot(AP_vec,V_vec.normalized)*V_vec.normalized;    
             AS.transform.position = AH.PointerPose.position;
-            VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec,V_norm)*V_norm;
+            VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec,V_vec.normalized)*V_vec.normalized;
         }
 
-        EL.transform.position = new Vector3(HW.transform.position.x,0,HW.transform.position.z) + new Vector3(Mathf.Cos(stheta+p/(r+d)), 0, Mathf.Sin(stheta+p/(r+d))) * (r+d);
-        Vector3 ELP_vec = EL.transform.position - P;
-        if (Vector3.Dot(ELP_vec,V_norm) < 0) {
-            EL.transform.position = EL.transform.position - (Vector3.Dot(ELP_vec,V_norm) + d) * V_norm; 
-        }
+        // For Debugging
+        // VS.transform.position = new Vector3(HW.transform.position.x,h/4, HW.transform.position.z) + new Vector3(Mathf.Cos(stheta), 0, Mathf.Sin(stheta)) * (r+d);
+        
+
+
+
+        
+        // SL.transform.position = new Vector3(HW.transform.position.x,0,HW.transform.position.z) + new Vector3(Mathf.Cos(stheta), 0, Mathf.Sin(stheta)) * (r+d);
+        // Vector3 SLP_vec = SL.transform.position - P;
+        // if (Vector3.Dot(SLP_vec,V_norm) < 0) {
+        //     SL.transform.position = SL.transform.position - (Vector3.Dot(SLP_vec,V_norm) + d) * V_norm; 
+        // }
+
+        // EL.transform.position = new Vector3(HW.transform.position.x,0,HW.transform.position.z) + new Vector3(Mathf.Cos(stheta+p/(r+d)), 0, Mathf.Sin(stheta+p/(r+d))) * (r+d);
+        // Vector3 ELP_vec = EL.transform.position - P;
+        // if (Vector3.Dot(ELP_vec,V_norm) < 0) {
+        //     EL.transform.position = EL.transform.position - (Vector3.Dot(ELP_vec,V_norm) + d) * V_norm; 
+        // }
     } 
 
     void HapticRendering() {
