@@ -49,6 +49,12 @@ public class Render : MonoBehaviour
     public GameObject SL;
     /// <summary> End Location Indicator </summary>
     public GameObject EL;
+    
+    /// <summary> Straightness Quesionnaire Window </summary>
+    public GameObject StraightnessQuestionnaireWindow;
+    /// <summary> Presence Instruction Window </summary>
+    public GameObject PresenceInstructionWindow;
+
     /// <summary> Straightness Radius </summary>
     private static readonly float STRAIGHT = 1000000.0f;
     /// <summary> Height Of All Walls </summary>
@@ -84,6 +90,15 @@ public class Render : MonoBehaviour
     private bool WithServo;
     
     private List<Tuple<float, bool>> Cases;
+    private int n_radius;
+
+    private String participant_id;
+    private StreamWriter cases_writer;
+    private StreamWriter straightness_response_writer;
+    private StreamWriter engagement_response_writer;
+    private StreamWriter presence_response_writer;
+    private StreamWriter immersion_response_writer;
+    private StreamWriter sickness_response_writer;
 
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
@@ -115,6 +130,13 @@ public class Render : MonoBehaviour
         }
     }
 
+    private void ScreenUpdate() {
+        StraightnessQuestionnaireWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.25f;
+        StraightnessQuestionnaireWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
+        PresenceInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.25f;
+        PresenceInstructionWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
+    }
+
 
     /**
       *  Start is called before the first frame update
@@ -123,10 +145,14 @@ public class Render : MonoBehaviour
     {
         // Create Cases
         Cases = new List<Tuple<float, bool>>();
+        n_radius = 0;
         foreach (var radius in _r)
         {
-            Cases.Add(new Tuple<float, bool>(radius, true));
-            Cases.Add(new Tuple<float, bool>(radius, false));
+            // randomlly choose bool value
+            bool FirstCondition = (UnityEngine.Random.value > 0.5f);
+            Cases.Add(new Tuple<float, bool>(radius, FirstCondition));
+            Cases.Add(new Tuple<float, bool>(radius, !FirstCondition));
+            n_radius += 1;
         }
         // Shuffle Cases
         Cases.Shuffle();
@@ -135,6 +161,37 @@ public class Render : MonoBehaviour
         udpClient = new UdpClient(localPort);
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
         Debug.Log("UDP Client started");
+
+        participant_id = DateTime.Now.ToString("yyyyMMddHHmmss");
+
+        cases_writer = new StreamWriter(Application.persistentDataPath + "/CaseOrder.csv", true);
+        if (new FileInfo(Application.persistentDataPath + "/CaseOrder.csv").Length == 0) {
+            cases_writer.WriteLine("Participant ID, Radius, Condition");
+        }
+        foreach (var c in Cases) {
+            cases_writer.WriteLine(participant_id + "," + c.Item1 + "," + c.Item2);
+        }
+
+        straightness_response_writer = new StreamWriter(Application.persistentDataPath + "/StraightnessResponse.csv", true);
+        if (new FileInfo(Application.persistentDataPath + "/StraightnessResponse.csv").Length == 0) {
+            straightness_response_writer.WriteLine("Participant ID, Radius, Condition, Straightness");
+        }
+        // engagement_response_writer = new StreamWriter(Application.persistentDataPath + "/EngagementResponse.csv", true);
+        // if (new FileInfo(Application.persistentDataPath + "/EngagementResponse.csv").Length == 0) {
+        //     engagement_response_writer.WriteLine("Participant ID, Radius, Condition, Engagement");
+        // }
+        // presence_response_writer = new StreamWriter(Application.persistentDataPath + "/PresenceResponse.csv", true);
+        // if (new FileInfo(Application.persistentDataPath + "/PresenceResponse.csv").Length == 0) {
+        //     presence_response_writer.WriteLine("Participant ID, Radius, Condition, Presence");
+        // }
+        // immersion_response_writer = new StreamWriter(Application.persistentDataPath + "/ImmersionResponse.csv", true);
+        // if (new FileInfo(Application.persistentDataPath + "/ImmersionResponse.csv").Length == 0) {
+        //     immersion_response_writer.WriteLine("Participant ID, Radius, Condition, Immersion");
+        // }
+        // sickness_response_writer = new StreamWriter(Application.persistentDataPath + "/SicknessResponse.csv", true);
+        // if (new FileInfo(Application.persistentDataPath + "/SicknessResponse.csv").Length == 0) {
+        //     sickness_response_writer.WriteLine("Participant ID, Radius, Condition, Sickness");
+        // }
     }
 
     void Start() 
@@ -152,10 +209,9 @@ public class Render : MonoBehaviour
 
         // Rendering Algorithm Update
         VisionRendering();  
+        ScreenUpdate();
         if (td > p && td - p < 0.1f) {
-            // Should have questionaire, which calls Initialization() after questionaire is done.
-            // For now, just call Initialization() directly.
-            Initialization();
+            StraightnessQuestionnaireWindow.SetActive(true);
             return;
         }
         HapticRendering();  // Dependent on Vision Rendering Algorithm
@@ -163,10 +219,6 @@ public class Render : MonoBehaviour
 
     void Initialization()
     {
-        // for (int i = 0; i < Cases.Count; i++)
-        // {
-        //     Debug.Log($"Case {i}: Radius: {Cases[i].Item1}, On/Off: {Cases[i].Item2}");
-        // }
         // Pop one at a time
         if (Cases.Count > 0)
         {
@@ -182,9 +234,10 @@ public class Render : MonoBehaviour
             theta = 0;  
             ptheta = Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z); 
         } else {
+            straightness_response_writer.Flush();
+            straightness_response_writer.Close();
             Debug.Log("No more case, terminating experiment");
-            // Application.Quit();
-            VW.SetActive(false);
+            Application.Quit();
         }
  }
 
@@ -246,6 +299,7 @@ public class Render : MonoBehaviour
             AS.transform.position = AH.PointerPose.position;
             VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec,V_vec.normalized)*V_vec.normalized;
         }
+        
     } 
 
     void HapticRendering() {
@@ -278,5 +332,26 @@ public class Render : MonoBehaviour
         }
         byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
         udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
+    }
+
+    public void StraightnessResponse(float response) {
+        // if (STRAIGHT- 0.1 < response && response < STRAIGHT+0.1) {
+        // straightness_response_writer.WriteLine(participant_id+", STRAIGHT, "+WithServo+", "+response);
+        // } else {
+        // straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
+        // }
+        straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
+        StraightnessQuestionnaireWindow.SetActive(false);
+        if (Cases.Count % n_radius == 0) {
+            // Pop Window For User to Take Off Headset and Take a Presence Survey
+            PresenceInstructionWindow.SetActive(true);
+        } else {
+            Initialization();
+        }
+    }
+
+    public void PresenceCompletion() {
+        PresenceInstructionWindow.SetActive(false);
+        Initialization();
     }
 }
