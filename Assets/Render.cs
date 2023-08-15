@@ -95,6 +95,7 @@ public class Render : MonoBehaviour
     private String participant_id;
     private StreamWriter cases_writer;
     private StreamWriter straightness_response_writer;
+    private StreamWriter position_writer;
     private StreamWriter engagement_response_writer;
     private StreamWriter presence_response_writer;
     private StreamWriter immersion_response_writer;
@@ -112,6 +113,9 @@ public class Render : MonoBehaviour
     private const int localPort = 4210;
     private UdpClient udpClient;
     private IPEndPoint remoteEndPoint;
+
+    private List<Vector3> position;
+    private List<float> time;
 
     /**
       *  Testing Objects Display Status Update
@@ -131,9 +135,9 @@ public class Render : MonoBehaviour
     }
 
     private void ScreenUpdate() {
-        StraightnessQuestionnaireWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.25f;
+        StraightnessQuestionnaireWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
         StraightnessQuestionnaireWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
-        PresenceInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.25f;
+        PresenceInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
         PresenceInstructionWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
     }
 
@@ -179,6 +183,10 @@ public class Render : MonoBehaviour
         if (new FileInfo(Application.persistentDataPath + "/StraightnessResponse.csv").Length == 0) {
             straightness_response_writer.WriteLine("Participant ID, Radius, Condition, Straightness");
         }
+        position_writer = new StreamWriter(Application.persistentDataPath + "/Position.csv", true);
+        if (new FileInfo(Application.persistentDataPath + "/Position.csv").Length == 0) {
+            position_writer.WriteLine("Participant ID, Radius, Condition, Position, Time");
+        }
         // engagement_response_writer = new StreamWriter(Application.persistentDataPath + "/EngagementResponse.csv", true);
         // if (new FileInfo(Application.persistentDataPath + "/EngagementResponse.csv").Length == 0) {
         //     engagement_response_writer.WriteLine("Participant ID, Radius, Condition, Engagement");
@@ -214,8 +222,12 @@ public class Render : MonoBehaviour
         VisionRendering();  
         ScreenUpdate();
         if (td > p && td - p < 0.1f) {
+            position_writer.WriteLine(participant_id+", "+r+", "+WithServo+", ("+String.Join(", ",position)+"), ("+String.Join(", ",time)+")");
             StraightnessQuestionnaireWindow.SetActive(true);
             return;
+        } else {
+            position.Add(U.centerEyeAnchor.transform.position);
+            time.Add(Time.time);
         }
         HapticRendering();  // Dependent on Vision Rendering Algorithm
     }
@@ -236,9 +248,14 @@ public class Render : MonoBehaviour
             // Reset Sum of Travel Angle and Relative Angle from Previous Projected Vector
             theta = 0;  
             ptheta = Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z); 
+        
+            position = new List<Vector3>();
+            time = new List<float>();
         } else {
             straightness_response_writer.Flush();
             straightness_response_writer.Close();
+            position_writer.Flush();
+            position_writer.Close();
             Debug.Log("No more case, terminating experiment");
             Application.Quit();
         }
@@ -343,8 +360,8 @@ public class Render : MonoBehaviour
         // } else {
         // straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
         // }
-        straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
         StraightnessQuestionnaireWindow.SetActive(false);
+        straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
         if (Cases.Count % n_radius == 0) {
             // Pop Window For User to Take Off Headset and Take a Presence Survey
             PresenceInstructionWindow.SetActive(true);
