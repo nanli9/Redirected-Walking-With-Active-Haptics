@@ -145,17 +145,20 @@ public class Render : MonoBehaviour
     {
         // Create Cases
         Cases = new List<Tuple<float, bool>>();
+        var Temp = new List<Tuple<float, bool>>();
         n_radius = 0;
         foreach (var radius in _r)
         {
             // randomlly choose bool value
             bool FirstCondition = (UnityEngine.Random.value > 0.5f);
             Cases.Add(new Tuple<float, bool>(radius, FirstCondition));
-            Cases.Add(new Tuple<float, bool>(radius, !FirstCondition));
+            Temp.Add(new Tuple<float, bool>(radius, !FirstCondition));
             n_radius += 1;
         }
         // Shuffle Cases
         Cases.Shuffle();
+        Temp.Shuffle();
+        Cases.AddRange(Temp);
 
         // Init UDP
         udpClient = new UdpClient(localPort);
