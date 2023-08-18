@@ -178,6 +178,8 @@ public class Render : MonoBehaviour
         foreach (var c in Cases) {
             cases_writer.WriteLine(participant_id + "," + c.Item1 + "," + c.Item2);
         }
+        cases_writer.Flush();
+        cases_writer.Close();
 
         straightness_response_writer = new StreamWriter(Application.persistentDataPath + "/StraightnessResponse.csv", true);
         if (new FileInfo(Application.persistentDataPath + "/StraightnessResponse.csv").Length == 0) {
@@ -222,7 +224,7 @@ public class Render : MonoBehaviour
         VisionRendering();  
         ScreenUpdate();
         if (td > p && td - p < 0.1f) {
-            position_writer.WriteLine(participant_id+", "+r+", "+WithServo+", ("+String.Join(", ",position)+"), ("+String.Join(", ",time)+")");
+            position_writer.WriteLine(participant_id+", "+r+", "+WithServo+", \"("+String.Join(", ",position)+")\", \"("+String.Join(", ",time)+")\"");
             StraightnessQuestionnaireWindow.SetActive(true);
             return;
         } else {
@@ -362,6 +364,7 @@ public class Render : MonoBehaviour
         // }
         StraightnessQuestionnaireWindow.SetActive(false);
         straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
+        straightness_response_writer.Flush();
         if (Cases.Count % n_radius == 0) {
             // Pop Window For User to Take Off Headset and Take a Presence Survey
             PresenceInstructionWindow.SetActive(true);
