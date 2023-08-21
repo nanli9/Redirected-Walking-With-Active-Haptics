@@ -152,10 +152,10 @@ public class Render : MonoBehaviour
         Cases = new List<Tuple<float, bool>>();
         var Temp = new List<Tuple<float, bool>>();
         n_radius = 0;
+        bool FirstCondition = (UnityEngine.Random.value > 0.5f);
         foreach (var radius in _r)
         {
             // randomlly choose bool value
-            bool FirstCondition = (UnityEngine.Random.value > 0.5f);
             Cases.Add(new Tuple<float, bool>(radius, FirstCondition));
             Temp.Add(new Tuple<float, bool>(radius, !FirstCondition));
             n_radius += 1;
