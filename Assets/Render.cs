@@ -190,21 +190,6 @@ public class Render : MonoBehaviour
             position_writer.WriteLine("Participant ID, Radius, Condition, Position, Time");
         }
         // engagement_response_writer = new StreamWriter(Application.persistentDataPath + "/EngagementResponse.csv", true);
-        // if (new FileInfo(Application.persistentDataPath + "/EngagementResponse.csv").Length == 0) {
-        //     engagement_response_writer.WriteLine("Participant ID, Radius, Condition, Engagement");
-        // }
-        // presence_response_writer = new StreamWriter(Application.persistentDataPath + "/PresenceResponse.csv", true);
-        // if (new FileInfo(Application.persistentDataPath + "/PresenceResponse.csv").Length == 0) {
-        //     presence_response_writer.WriteLine("Participant ID, Radius, Condition, Presence");
-        // }
-        // immersion_response_writer = new StreamWriter(Application.persistentDataPath + "/ImmersionResponse.csv", true);
-        // if (new FileInfo(Application.persistentDataPath + "/ImmersionResponse.csv").Length == 0) {
-        //     immersion_response_writer.WriteLine("Participant ID, Radius, Condition, Immersion");
-        // }
-        // sickness_response_writer = new StreamWriter(Application.persistentDataPath + "/SicknessResponse.csv", true);
-        // if (new FileInfo(Application.persistentDataPath + "/SicknessResponse.csv").Length == 0) {
-        //     sickness_response_writer.WriteLine("Participant ID, Radius, Condition, Sickness");
-        // }
     }
 
     void Start() 
@@ -246,11 +231,10 @@ public class Render : MonoBehaviour
             // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
             HW.transform.localScale = new Vector3(r*2, h, r*2); 
             HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.centerEyeAnchor.transform.right * (r + d);
-
             // Reset Sum of Travel Angle and Relative Angle from Previous Projected Vector
             theta = 0;  
-            ptheta = Mathf.Atan2(U.centerEyeAnchor.transform.position.z - HW.transform.position.z, U.centerEyeAnchor.transform.position.z - HW.transform.position.z); 
-        
+            V_vec = new Vector3(U.centerEyeAnchor.transform.position.x - HW.transform.position.x, 0, U.centerEyeAnchor.transform.position.z - HW.transform.position.z);
+            ptheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
             position = new List<Vector3>();
             time = new List<float>();
         } else {
@@ -283,9 +267,6 @@ public class Render : MonoBehaviour
         ctheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
         diff = ctheta - ptheta;
         diff += (diff > Mathf.PI) ? -2 * Mathf.PI : (diff < -Mathf.PI) ?  2 * Mathf.PI : 0; // Convert to -PI to PI scale
-        // float diff_x = Mathf.Cos(ptheta) * Mathf.Sin(ctheta) - Mathf.Sin(ptheta) * Mathf.Cos(ctheta);
-        // float diff_y = Mathf.Cos(ptheta) * Mathf.Cos(ctheta) + Mathf.Sin(ptheta) * Mathf.Sin(ctheta);
-        // diff = Mathf.Atan2(diff_y, diff_x);
         theta += diff;
         ptheta = ctheta;
 
