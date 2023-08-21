@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections;
@@ -171,7 +172,7 @@ public class Render : MonoBehaviour
 
         participant_id = DateTime.Now.ToString("yyyyMMddHHmmss");
 
-        cases_writer = new StreamWriter(Application.persistentDataPath + "/CaseOrder.csv", true);
+        cases_writer = new StreamWriter(Application.persistentDataPath + "/CaseOrder.csv", true, new UTF8Encoding());
         if (new FileInfo(Application.persistentDataPath + "/CaseOrder.csv").Length == 0) {
             cases_writer.WriteLine("Participant ID, Radius, Condition");
         }
@@ -181,11 +182,11 @@ public class Render : MonoBehaviour
         cases_writer.Flush();
         cases_writer.Close();
 
-        straightness_response_writer = new StreamWriter(Application.persistentDataPath + "/StraightnessResponse.csv", true);
+        straightness_response_writer = new StreamWriter(Application.persistentDataPath + "/StraightnessResponse.csv", true, new UTF8Encoding());
         if (new FileInfo(Application.persistentDataPath + "/StraightnessResponse.csv").Length == 0) {
             straightness_response_writer.WriteLine("Participant ID, Radius, Condition, Straightness");
         }
-        position_writer = new StreamWriter(Application.persistentDataPath + "/Position.csv", true);
+        position_writer = new StreamWriter(Application.persistentDataPath + "/Position.csv", true, new UTF8Encoding());
         if (new FileInfo(Application.persistentDataPath + "/Position.csv").Length == 0) {
             position_writer.WriteLine("Participant ID, Radius, Condition, Position, Time");
         }
@@ -209,6 +210,7 @@ public class Render : MonoBehaviour
         ScreenUpdate();
         if (td > p && td - p < 0.1f) {
             position_writer.WriteLine(participant_id+", "+r+", "+WithServo+", \"("+String.Join(", ",position)+")\", \"("+String.Join(", ",time)+")\"");
+            position_writer.Flush();
             StraightnessQuestionnaireWindow.SetActive(true);
             return;
         } else {
