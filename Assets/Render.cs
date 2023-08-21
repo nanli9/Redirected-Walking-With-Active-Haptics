@@ -245,7 +245,7 @@ public class Render : MonoBehaviour
             Cases.RemoveAt(0);
             // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
             HW.transform.localScale = new Vector3(r*2, h, r*2); 
-            HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.transform.right * (r + d);
+            HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.centerEyeAnchor.transform.right * (r + d);
 
             // Reset Sum of Travel Angle and Relative Angle from Previous Projected Vector
             theta = 0;  
@@ -283,6 +283,9 @@ public class Render : MonoBehaviour
         ctheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
         diff = ctheta - ptheta;
         diff += (diff > Mathf.PI) ? -2 * Mathf.PI : (diff < -Mathf.PI) ?  2 * Mathf.PI : 0; // Convert to -PI to PI scale
+        // float diff_x = Mathf.Cos(ptheta) * Mathf.Sin(ctheta) - Mathf.Sin(ptheta) * Mathf.Cos(ctheta);
+        // float diff_y = Mathf.Cos(ptheta) * Mathf.Cos(ctheta) + Mathf.Sin(ptheta) * Mathf.Sin(ctheta);
+        // diff = Mathf.Atan2(diff_y, diff_x);
         theta += diff;
         ptheta = ctheta;
 
@@ -362,7 +365,8 @@ public class Render : MonoBehaviour
         // } else {
         // straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
         // }
-        StraightnessQuestionnaireWindow.SetActive(false);
+
+        // StraightnessQuestionnaireWindow.SetActive(false); // this is causing error somehow
         straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
         straightness_response_writer.Flush();
         if (Cases.Count % n_radius == 0) {
