@@ -189,7 +189,6 @@ public class Render : MonoBehaviour
         if (new FileInfo(Application.persistentDataPath + "/Position.csv").Length == 0) {
             position_writer.WriteLine("Participant ID, Radius, Condition, Position, Time");
         }
-        // engagement_response_writer = new StreamWriter(Application.persistentDataPath + "/EngagementResponse.csv", true);
     }
 
     void Start() 
