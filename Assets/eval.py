@@ -107,7 +107,7 @@ def update(val):
     ax.set_ylabel('Y',fontdict=dict(weight='bold'))
     ax.xaxis.set_tick_params(labelsize=8 * boldness)
     ax.yaxis.set_tick_params(labelsize=8 * boldness)
-    ax.set_title('Direction Vectors and Tangents')
+    # ax.set_title('Direction Vectors and Tangents', fontdict=dict(weight='bold'))
     ax.set_axisbelow(True)
     ax.grid(True, linestyle='--', color='0.55',linewidth=2)
 
