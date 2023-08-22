@@ -55,6 +55,8 @@ public class Render : MonoBehaviour
     public GameObject StraightnessQuestionnaireWindow;
     /// <summary> Presence Instruction Window </summary>
     public GameObject PresenceInstructionWindow;
+    /// <summary> Direction Instruction Window </summary>
+    public GameObject DirectionInstructionWindow;
 
     /// <summary> Straightness Radius </summary>
     private static readonly float STRAIGHT = 1000000.0f;
@@ -236,7 +238,7 @@ public class Render : MonoBehaviour
         }
     }
 
-    void Initialization()
+    public void Initialization()
     {
         // Pop one at a time
         if (Cases.Count > 0)
@@ -372,12 +374,14 @@ public class Render : MonoBehaviour
             // Pop Window For User to Take Off Headset and Take a Presence Survey
             PresenceInstructionWindow.SetActive(true);
         } else {
-            Initialization();
+            // Initialization();
+            DirectionInstructionWindow.SetActive(true);
         }
     }
 
     public void PresenceCompletion() {
         PresenceInstructionWindow.SetActive(false);
-        Initialization();
+        // Initialization();
+        DirectionInstructionWindow.SetActive(true);
     }
 }
