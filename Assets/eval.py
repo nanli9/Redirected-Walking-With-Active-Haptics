@@ -11,11 +11,12 @@ radius_index = 0
 straight = 1000000
 allowed_radius = [7,14,21]
 allowed_radius = allowed_radius + [straight] + [-r for r in reversed(allowed_radius)]
-path = 1.2
+path = 5
 min_path = 1
 max_path = 7
 arc_start_angle = 0.0  # starting dest_angle of the arc in degrees
 initial_distance = 0.2
+boldness = 2
 
 def getProjectionPoint(radius, path):
     center = np.array([-(radius + initial_distance), 0])
@@ -44,7 +45,7 @@ def get_bounds_for_path(path):
 
 # Create the plot
 fig, ax = plt.subplots()
-plt.subplots_adjust(bottom=0.35)
+plt.subplots_adjust(bottom=0.4)
 
 radius_slider_ax = plt.axes([0.2, 0.08, 0.65, 0.10], facecolor='lightgoldenrodyellow')
 radius_slider = Slider(radius_slider_ax, 'Radius', 0, len(allowed_radius)-1, valinit=radius_index, valstep=1)
@@ -65,7 +66,7 @@ def save_current_ax(event):
     else:
         filename = f"Radius_{current_radius}.png"
     # Save the current view of the ax to a file
-    fig.savefig("./PNG/"+filename, bbox_inches=extent.expanded(1.4, 1.2))
+    fig.savefig("./PNG/"+filename, bbox_inches=extent.expanded(1.6, 1.5))
 
 save_button.on_clicked(save_current_ax)
 
@@ -81,15 +82,16 @@ def update(val):
     theta1 = arc_start_angle + (radius < 0) * dest_angle * 180 / pi
     theta2 = arc_start_angle + (radius >= 0) * dest_angle * 180 / pi
 
-    ax.plot(*origin, 'ko')
-    ax.plot(*dest, 'ro')
-    ax.add_patch(patches.Circle(center, radius, color='saddlebrown', fill=False))
-    ax.add_patch(patches.Arc(center, 2*(radius+initial_distance), 2*(radius+initial_distance), 
+    ax.plot(*origin, 'go',markersize=5 * boldness )
+    ax.plot(*dest, 'ro',markersize=5 * boldness)
+    ax.add_patch(patches.Circle(center, radius, color='saddlebrown', fill=False, linewidth=boldness))
+    ax.add_patch(patches.Arc(center, 2*(radius+initial_distance), boldness*(radius+initial_distance), 
                     theta1=theta1, 
                     theta2=theta2,
-                    edgecolor='royalblue'))
+                    edgecolor='royalblue',
+                    linewidth=boldness))
     ax.annotate('', xy=arrow, xytext=dest,
-            arrowprops=dict(arrowstyle='-|>', color='royalblue', mutation_scale=10.0))
+            arrowprops=dict(arrowstyle='-|>', color='royalblue', mutation_scale=10.0 * boldness))
 
     min_x, min_y, max_x, max_y = get_bounds_for_path(path)
     ax.set_aspect('equal')
@@ -101,11 +103,13 @@ def update(val):
         ax.yaxis.set_major_locator(MultipleLocator(0.1))
     ax.set_xlim(min_x, max_x)
     ax.set_ylim(min_y, max_y)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
+    ax.set_xlabel('X',fontdict=dict(weight='bold'))
+    ax.set_ylabel('Y',fontdict=dict(weight='bold'))
+    ax.xaxis.set_tick_params(labelsize=8 * boldness)
+    ax.yaxis.set_tick_params(labelsize=8 * boldness)
     ax.set_title('Direction Vectors and Tangents')
     ax.set_axisbelow(True)
-    ax.grid(True, linestyle='--', color='0.55')
+    ax.grid(True, linestyle='--', color='0.55',linewidth=2)
 
 radius_slider.on_changed(update)
 path_slider.on_changed(update)
