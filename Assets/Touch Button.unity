@@ -4617,7 +4617,7 @@ MonoBehaviour:
   StraightnessQuestionnaireWindow: {fileID: 309280693}
   PresenceInstructionWindow: {fileID: 652529577}
   d: 0.62
-  p: 1.2
+  p: 5
   UseRenderPosition: 1
   ViewTestingObjects: 0
   ViewVisualWall: 1

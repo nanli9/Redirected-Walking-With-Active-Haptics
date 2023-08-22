@@ -118,6 +118,8 @@ public class Render : MonoBehaviour
     private List<Vector3> position;
     private List<float> time;
 
+    private bool isResponding;
+
     /**
       *  Testing Objects Display Status Update
       */
@@ -203,14 +205,18 @@ public class Render : MonoBehaviour
     {
         // Testing Variable Update
         VW.SetActive(ViewVisualWall);
+        VF.SetActive(true);
+        SL.SetActive(true);
+        EL.SetActive(true);
         TestingObjectsViewUpdate();
 
+        if (!isResponding) {
         // Rendering Algorithm Update
         VisionRendering();  
-        ScreenUpdate();
         if (td > p && td - p < 0.1f) {
             position_writer.WriteLine(participant_id+", "+r+", "+WithServo+", \"("+String.Join(", ",position)+")\", \"("+String.Join(", ",time)+")\"");
             position_writer.Flush();
+            isResponding = true;
             StraightnessQuestionnaireWindow.SetActive(true);
             return;
         } else {
@@ -218,6 +224,15 @@ public class Render : MonoBehaviour
             time.Add(Time.time);
         }
         HapticRendering();  // Dependent on Vision Rendering Algorithm
+        } else {
+            ScreenUpdate();
+            VW.SetActive(false);
+            VF.SetActive(false);
+            SL.SetActive(false);
+            EL.SetActive(false);
+            AH.UseRenderPosition = false;
+            SendServoPosition(0.0f);
+        }
     }
 
     void Initialization()
@@ -238,6 +253,7 @@ public class Render : MonoBehaviour
             ptheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
             position = new List<Vector3>();
             time = new List<float>();
+            isResponding = false;
         } else {
             straightness_response_writer.Flush();
             straightness_response_writer.Close();
