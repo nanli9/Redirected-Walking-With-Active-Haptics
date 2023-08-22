@@ -109,7 +109,8 @@ public class Render : MonoBehaviour
     /**
       *  Remote Servo Connection Variables
       */
-    private const string remoteIpAddress = "192.168.4.1";
+    // private const string remoteIpAddress = "192.168.4.1";
+    private const string remoteIpAddress = "192.168.88.252";
     private const int remotePort = 4210;
     private const int localPort = 4210;
     private UdpClient udpClient;
