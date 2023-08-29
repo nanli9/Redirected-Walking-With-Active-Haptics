@@ -5233,7 +5233,7 @@ MonoBehaviour:
   EL: {fileID: 1536155984}
   StraightnessQuestionnaireWindow: {fileID: 309280693}
   PresenceInstructionWindow: {fileID: 652529577}
-  DirectionInstructionWindow: {fileID: 0}
+  DirectionInstructionWindow: {fileID: 1488459225}
   d: 0.62
   p: 5
   UseRenderPosition: 1

@@ -111,8 +111,8 @@ public class Render : MonoBehaviour
     /**
       *  Remote Servo Connection Variables
       */
-    // private const string remoteIpAddress = "192.168.4.1";
-    private const string remoteIpAddress = "192.168.88.252";
+    private const string remoteIpAddress = "192.168.4.1";
+    // private const string remoteIpAddress = "192.168.88.251";
     private const int remotePort = 4210;
     private const int localPort = 4210;
     private UdpClient udpClient;
@@ -145,6 +145,8 @@ public class Render : MonoBehaviour
         StraightnessQuestionnaireWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
         PresenceInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
         PresenceInstructionWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
+        DirectionInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
+        DirectionInstructionWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
     }
 
 
