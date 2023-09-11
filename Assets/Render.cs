@@ -55,6 +55,7 @@ public class Render : MonoBehaviour
     public GameObject StraightnessQuestionnaireWindow;
     /// <summary> Presence Instruction Window </summary>
     public GameObject PresenceInstructionWindow;
+    public TextMeshPro PresenceInstructionText;
     /// <summary> Direction Instruction Window </summary>
     public GameObject DirectionInstructionWindow;
 
@@ -177,7 +178,7 @@ public class Render : MonoBehaviour
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
         Debug.Log("UDP Client started");
 
-        participant_id = DateTime.Now.ToString("yyyyMMddHHmmss");
+        participant_id = DateTime.Now.ToString("ddHHmm");
 
         cases_writer = new StreamWriter(Application.persistentDataPath + "/CaseOrder.csv", true, new UTF8Encoding());
         if (new FileInfo(Application.persistentDataPath + "/CaseOrder.csv").Length == 0) {
@@ -374,6 +375,7 @@ public class Render : MonoBehaviour
         straightness_response_writer.Flush();
         if (Cases.Count % n_radius == 0) {
             // Pop Window For User to Take Off Headset and Take a Presence Survey
+            PresenceInstructionText.text = "Please Take Off Your Headset To Complete A Survey.\n(Your User ID: "+participant_id+")\nDO NOT CLICK ON BUTTON BELOW BEFORE COMPLETING SURVEY!";
             PresenceInstructionWindow.SetActive(true);
         } else {
             // Initialization();
