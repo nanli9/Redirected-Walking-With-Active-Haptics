@@ -203,7 +203,9 @@ public class Render : MonoBehaviour
     void Start() 
     {
         // Init Variables
-        Initialization();
+        // Initialization();
+        isResponding = true;
+        DirectionInstructionWindow.SetActive(true);
     }
 
     // Update is called once per frame
