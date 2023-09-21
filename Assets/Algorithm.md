@@ -22,11 +22,13 @@ called every single frame
     1. Get **Projected Vector** $\vec{V}$ from center of **Haptic Wall** $HW$ to position of **User** $U$
     $$\vec{V} = \langle \vec{U}_x - \vec{HW}_x,0,\vec{U}_z - \vec{HW}_z\rangle$$
     
+    $$r_{dir} = \frac{r}{\left|r\right|}$$ 
+
     2. Get **Projected Point** $P$ by projecting **Projected Unit Vector** $\hat{V}$ from center of **Haptic Wall** $HW$ in **Radius** $r$ magnitude.
-    $$P = \langle HW_x,0,HW_z \rangle+r\cdot\hat{V}$$ 
+    $$P = \langle HW_x,0,HW_z \rangle+r_{dir}\cdot r\cdot\hat{V}$$ 
     
     3. Get clockwize **Tangent Unit Vector** $\hat{T}$ on the surface of **Haptic Wall** at **Projected Point** using absolute **Up** $\hat{y}$ direction, and **Projected Unit Vector** $\hat{V}$.
-    $$\hat{T} = \hat{y}\times\hat{V}$$  
+    $$\hat{T} = (r_{dir}\cdot\hat{y})\times\hat{V}$$  
     
     4. Match **Quaternion** $Q_{VW}$ of **Visual Wall** $VW$ and **Quaternion** $Q_{VF}$ of **Visual Floor** $VF$ to **Projected Unit Vector** $\hat{V}$ direction using Unity $Quaternion.LookRotation$ method. 
 
@@ -34,11 +36,18 @@ called every single frame
     $$Q_{VW} = Quaternion.LookRotation(\hat{V},\hat{y})$$ 
     $$Q_{VF} = Q_{VW}$$ 
 
-    5. Get **Current User Relative Angle** $\theta_c$ from z component $\hat{V_z}$ and x component $\hat{V_x}$ of **Project Vector** in $-\pi$ to $\pi$ scale. Get $\theta_{diff}$
+    5. Get **Current User Relative Angle** $\theta_c$ from z component $\hat{V_z}$ and x component $\hat{V_x}$ of **Project Vector** in $-\pi$ to $\pi$ scale. Get $\theta_d$
     $$\theta_c = arctan2(\hat{V_z},\hat{V_x})$$
-    $$\text{diff}_x = \cos(\theta_p)\sin(\theta_c) - \sin(\theta_p)\cos(\theta_c)$$
-    $$\text{diff}_y = \cos(\theta_p)\cos(\theta_c) + \sin(\theta_p)\sin(\theta_c)$$
-    $$\theta = \theta + arctan2(\text{diff}_y,\text{diff}_x)$$
+    <!-- $$\text{diff}_x = \cos(\theta_p)\sin(\theta_c) - \sin(\theta_p)\cos(\theta_c)$$
+    $$\text{diff}_y = \cos(\theta_p)\cos(\theta_c) + \sin(\theta_p)\sin(\theta_c)$$ -->
+    <!-- $$\theta = \theta + arctan2(\text{diff}_y,\text{diff}_x)$$ -->
+    $$\theta_d = \theta_c - \theta_p$$
+    $$\theta_d=\begin{cases}
+        \theta_d - 2\pi & \text{if } \theta_d > \pi \\
+        \theta_d + 2\pi & \text{if } \theta_d < -\pi \\        
+        \theta_d & \text{otherwise} 
+    \end{cases}$$
+    $$\theta = \theta + \theta_d$$
     $$\theta_p = \theta_c$$
     
     6. Get **User Travel Distance** $td$ from **Total Traveled Angle** $\theta$ multiplied by sum of **Radius** $r$ of **Haptic Wall** and **Initial Distance** $d$.
@@ -53,7 +62,7 @@ called every single frame
     $$VW = \langle VW_x,h/2,VW_z \rangle$$
 2. **Start Position Indicator** $SL$ and **End Position Indicator** $EL$, **User** $U$ guiding objects are calculated  by:
     1. Set **Start Position Indicator** $SL$ to where **Projected Point** $P$ is shifted with **Shifting Direction Vector** $\vec{S}$ and **Projected Unit Vector** $\hat{V}$ in **Initial Distance** $d$ magnitude.
-    $$SL = P + \vec{S} + d \cdot \hat{V}$$
+    $$SL = P + \vec{S} + r_{dir}\cdot d \cdot \hat{V}$$
 
     2. Set **End Position Indicator** $EL$ to where **Start Position Indicator** $SL$ is shifted with anti-clockwize **Tangent Unit Vector** $-\hat{T}$ in **Expected Travel Distance** $p$.
     $$EL = SL - p \cdot \hat{T}$$
@@ -86,7 +95,7 @@ called first vision rendering algorithm
     $$
     
     2. After **Haptic Left Hand** $HH$ calculation done, distance between **Actual Left Hand** $AH$ and **Haptic Left Hand** $HH$ will be sent to my device to display force based on its magnitude.
-    $$ Force =  |HH - AH| $$
+    $$ Force =  \left|HH - AH\right| $$
 
 # Issues
 1. HW seems to be too rough, mismatch of surface of HW and HS might be result of it

@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using System.Linq;
 
 
 public static class IListExtensions {
@@ -70,6 +71,9 @@ public class Render : MonoBehaviour
     /// <summary> Allowed Radius </summary>
     // private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f}; 
     private static readonly float[] _r = {7.0f,14.0f,21.0f}; 
+    // private static readonly float[] _r = {-7.0f,-14.0f,-21.0f};
+    
+    // private static readonly float[] _r = {7f,-7f};
     /// <summary> [Placeholder] Current Radius </summary>
     private float r;
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
@@ -159,6 +163,8 @@ public class Render : MonoBehaviour
         // Create Cases
         Cases = new List<Tuple<float, bool>>();
         var Temp = new List<Tuple<float, bool>>();
+        var Temp1 = new List<Tuple<float, bool>>();
+        var Temp2 = new List<Tuple<float, bool>>();
         n_radius = 0;
         // bool FirstCondition = (UnityEngine.Random.value > 0.5f);
         bool FirstCondition = true;
@@ -166,14 +172,19 @@ public class Render : MonoBehaviour
         {
             // randomlly choose bool value
             Cases.Add(new Tuple<float, bool>(radius, FirstCondition));
-            Temp.Add(new Tuple<float, bool>(radius, !FirstCondition));
-            n_radius += 1;
+            Temp.Add(new Tuple<float, bool>(-radius, FirstCondition));
+            Temp1.Add(new Tuple<float, bool>(radius, !FirstCondition));
+            Temp2.Add(new Tuple<float, bool>(-radius, !FirstCondition));
+            n_radius += 2;
         }
         // Shuffle Cases
         Cases.Shuffle();
         Temp.Shuffle();
+        Temp1.Shuffle();
+        Temp2.Shuffle();
         Cases.AddRange(Temp);
-
+        Cases.AddRange(Temp1);
+        Cases.AddRange(Temp2);
         // Init UDP
         udpClient = new UdpClient(localPort);
         remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
@@ -205,6 +216,7 @@ public class Render : MonoBehaviour
     {
         // Init Variables
         // Initialization();
+
         isResponding = true;
         DirectionInstructionWindow.SetActive(true);
     }
@@ -275,16 +287,17 @@ public class Render : MonoBehaviour
 
     void VisionRendering()
     {
+        float r_d = r / Mathf.Abs(r);
         /// Visual Wall and Visual Floor Rendering
         // 1. Get Projected Vector from center of Haptic Wall to position of User
         V_vec = new Vector3(U.centerEyeAnchor.transform.position.x - HW.transform.position.x, 0, U.centerEyeAnchor.transform.position.z - HW.transform.position.z);
 
         // 2. Get Projected Point by projecting Projected Vector from center of Haptic Wall in Radius magnitude.
-        P = new Vector3(HW.transform.position.x, 0, HW.transform.position.z) + V_vec.normalized * r;
+        P = new Vector3(HW.transform.position.x, 0, HW.transform.position.z) + V_vec.normalized * r * r_d;
 
         // 3. Get clockwize Tangent Unit Vector on the surface of Haptic Wall at Projected Point using absolute Up direction, and Projected Vector.
-        T_hat = Vector3.Cross(Vector3.up, V_vec.normalized);
-
+        T_hat = Vector3.Cross(r_d * Vector3.up, V_vec.normalized);
+        
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to Projected Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
         VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
         VF.transform.rotation = VW.transform.rotation;
@@ -308,7 +321,7 @@ public class Render : MonoBehaviour
         VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
 
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
-        SL.transform.position = P + V_vec.normalized * d + S_vec;
+        SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
 
         // 10. Set End Indicator position to anti-clockwize Tangent Unit Vector direction with path magnitude from Start Indicator.
         EL.transform.position = SL.transform.position - p * T_hat;
@@ -317,9 +330,9 @@ public class Render : MonoBehaviour
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
         // Else, Visual Left Hand stays at Actual Left Hand position.
         Vector3 AP_vec = new Vector3(AH.PointerPose.localPosition.x,0,AH.PointerPose.localPosition.z) - P;
-        AP_vec += V_vec.normalized * 0.04f;
+        // AP_vec += V_vec.normalized * 0.04f;
         AH.UseRenderPosition = UseRenderPosition;
-        if (Vector3.Dot(AP_vec,V_vec.normalized) > 0) {
+        if (Vector3.Dot(AP_vec,V_vec.normalized) * r_d> 0) {
             // AH.RenderPosition is VH position
             AH.RenderPosition = AH.PointerPose.localPosition;
             AS.transform.position = AH.PointerPose.position;
@@ -339,10 +352,14 @@ public class Render : MonoBehaviour
         // 1. if Acutal Left Hand is inside Haptic Wall, then Haptic Left Hand position is projected on closet point on surface of Haptic Wall from Actual Left Hand position.
         // Else, Haptic Left Hand stays at Actual Left Hand position.
         Vector3 AW = new Vector3(AH.PointerPose.position.x,0,AH.PointerPose.position.z) - new Vector3(HW.transform.position.x,0,HW.transform.position.z);
-        if (AW.magnitude > r) {
+        Debug.Log("AW.magnitude: "+AW.magnitude+", Mathf.Abs(r)-d: "+(Mathf.Abs(r)-d));
+        float r_d = r / Mathf.Abs(r);
+
+        if (AW.magnitude * r_d > r) {
             HS.transform.position = AH.PointerPose.position;
         } else {
-            HS.transform.position = new Vector3(HW.transform.position.x, AH.PointerPose.position.y, HW.transform.position.z) + AW.normalized * r;
+            HS.transform.position = new Vector3(HW.transform.position.x, AH.PointerPose.position.y, HW.transform.position.z) + AW.normalized * Mathf.Abs(r);
+            // HS.transform.position = new Vector3(0,0,0);
         }
         
         // 2. After Haptic Left Hand calculation done, distance between Actual Left Hand and Haptic Left Hand will be sent to my device to display force based on its magnitude.
