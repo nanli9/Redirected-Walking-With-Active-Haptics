@@ -393,14 +393,15 @@ public class Render : MonoBehaviour
         // StraightnessQuestionnaireWindow.SetActive(false); // this is causing error somehow
         straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
         straightness_response_writer.Flush();
-        if (Cases.Count % n_radius == 0) {
-            // Pop Window For User to Take Off Headset and Take a Presence Survey
-            PresenceInstructionText.text = "Please Take Off Your Headset To Complete A Survey.\n(Your User ID: "+participant_id+")\nDO NOT CLICK ON BUTTON BELOW BEFORE COMPLETING SURVEY!";
-            PresenceInstructionWindow.SetActive(true);
-        } else {
-            // Initialization();
-            DirectionInstructionWindow.SetActive(true);
-        }
+        // Pop Window For User to Take Off Headset and Take a Presence Survey
+        PresenceInstructionText.text = "Please Take Off Your Headset To Complete A Survey.\n(Your User ID: "+participant_id+")\nDO NOT CLICK ON BUTTON BELOW BEFORE COMPLETING SURVEY!";
+        PresenceInstructionWindow.SetActive(true);
+        // if (Cases.Count % n_radius == 0) {
+        // } else {
+        //     // Initialization();
+        //     DirectionInstructionWindow.SetActive(true);
+        // }
+        
     }
 
     public void PresenceCompletion() {
