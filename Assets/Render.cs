@@ -10,14 +10,17 @@ using TMPro;
 using System.Linq;
 
 
-public static class IListExtensions {
+public static class IListExtensions
+{
     /// <summary>
     /// Shuffles the element order of the specified list.
     /// </summary>
-    public static void Shuffle<T>(this IList<T> ts) {
+    public static void Shuffle<T>(this IList<T> ts)
+    {
         var count = ts.Count;
         var last = count - 1;
-        for (var i = 0; i < last; ++i) {
+        for (var i = 0; i < last; ++i)
+        {
             var r = UnityEngine.Random.Range(i, count);
             var tmp = ts[i];
             ts[i] = ts[r];
@@ -25,7 +28,7 @@ public static class IListExtensions {
         }
     }
 }
- 
+
 
 public class Render : MonoBehaviour
 {
@@ -38,25 +41,20 @@ public class Render : MonoBehaviour
     /// <summary> Actual Sphere </summary>
     public GameObject AS;
     /// <summary> Haptic Sphere </summary>
-    public GameObject HS;    
+    public GameObject HS;
     /// <summary> Visual Sphere </summary>
     public GameObject VS;
     /// <summary> Haptic Wall </summary>
     public GameObject HW;
     /// <summary> Visual Wall </summary>
-    //public GameObject VW;
+    public GameObject VW;
     /// <summary> Visual Floor </summary>
-   
-    public GameObject VL; // Virtual Line or Path
-    private LineRenderer lineRenderer;
-    public int curveSegmentCount = 20;
-
-    public GameObject VF; 
+    public GameObject VF;
     /// <summary> Start Location Indicator </summary>
     public GameObject SL;
     /// <summary> End Location Indicator </summary>
     public GameObject EL;
-    
+
     /// <summary> Straightness Quesionnaire Window </summary>
     public GameObject StraightnessQuestionnaireWindow;
     /// <summary> Presence Instruction Window </summary>
@@ -75,9 +73,9 @@ public class Render : MonoBehaviour
     public float p = 5f;
     /// <summary> Allowed Radius </summary>
     // private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f}; 
-    private static readonly float[] _r = {7.0f,14.0f,21.0f}; 
+    private static readonly float[] _r = { 7.0f, 14.0f, 21.0f };
     // private static readonly float[] _r = {-7.0f,-14.0f,-21.0f};
-    
+
     // private static readonly float[] _r = {7f,-7f};
     /// <summary> [Placeholder] Current Radius </summary>
     private float r;
@@ -101,7 +99,7 @@ public class Render : MonoBehaviour
     private Vector3 S_vec;
     /// <summary> Remote Servo Condition Switch </summary>
     private bool WithServo;
-    
+
     private List<Tuple<float, bool>> Cases;
     private int n_radius;
 
@@ -117,7 +115,7 @@ public class Render : MonoBehaviour
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
     public bool ViewVisualWall = true;
-    
+
     /**
       *  Remote Servo Connection Variables
       */
@@ -133,44 +131,20 @@ public class Render : MonoBehaviour
 
     private bool isResponding;
 
-    void DrawCurvedPath(Vector3 startPoint, float radius, float arcLength, Vector3 normal, int segments)
-    {
-        float angleTotal = arcLength / radius;
-        float angleStep = angleTotal / (segments - 1);
-        Vector3[] positions = new Vector3[segments];
-
-        for (int i = 0; i < segments; i++)
-        {
-            float theta = angleStep * i;
-            float z = Mathf.Sin(theta) * radius;
-            float x = Mathf.Cos(theta) * radius;
-
-            // Align with theta = 0
-            z -= Mathf.Sin(0) * radius;
-            x -= Mathf.Cos(0) * radius;
-
-            Vector3 localPoint = new Vector3(x, 0f, z);
-            // Rotate to align with real-world curve direction
-            Quaternion rotation = Quaternion.LookRotation(Vector3.Cross(normal, Vector3.up));
-            Vector3 worldPoint = rotation * localPoint + startPoint;
-
-            positions[i] = worldPoint;
-        }
-
-        lineRenderer.positionCount = segments;
-        lineRenderer.SetPositions(positions);
-    }
-
     /**
       *  Testing Objects Display Status Update
       */
-    private void TestingObjectsViewUpdate() {
-        if (ViewTestingObjects) {
+    private void TestingObjectsViewUpdate()
+    {
+        if (ViewTestingObjects)
+        {
             HW.layer = LayerMask.NameToLayer("Default");
             AS.layer = LayerMask.NameToLayer("Default");
             VS.layer = LayerMask.NameToLayer("Default");
             HS.layer = LayerMask.NameToLayer("Default");
-        } else {
+        }
+        else
+        {
             HW.layer = LayerMask.NameToLayer("TestingObject");
             AS.layer = LayerMask.NameToLayer("TestingObject");
             VS.layer = LayerMask.NameToLayer("TestingObject");
@@ -178,7 +152,8 @@ public class Render : MonoBehaviour
         }
     }
 
-    private void ScreenUpdate() {
+    private void ScreenUpdate()
+    {
         StraightnessQuestionnaireWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
         StraightnessQuestionnaireWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
         PresenceInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
@@ -226,31 +201,35 @@ public class Render : MonoBehaviour
         participant_id = DateTime.Now.ToString("ddHHmm");
 
         cases_writer = new StreamWriter(Application.persistentDataPath + "/CaseOrder.csv", true, new UTF8Encoding());
-        if (new FileInfo(Application.persistentDataPath + "/CaseOrder.csv").Length == 0) {
+        if (new FileInfo(Application.persistentDataPath + "/CaseOrder.csv").Length == 0)
+        {
             cases_writer.WriteLine("Participant ID, Radius, Condition");
         }
-        foreach (var c in Cases) {
+        foreach (var c in Cases)
+        {
             cases_writer.WriteLine(participant_id + "," + c.Item1 + "," + c.Item2);
         }
         cases_writer.Flush();
         cases_writer.Close();
 
         straightness_response_writer = new StreamWriter(Application.persistentDataPath + "/StraightnessResponse.csv", true, new UTF8Encoding());
-        if (new FileInfo(Application.persistentDataPath + "/StraightnessResponse.csv").Length == 0) {
+        if (new FileInfo(Application.persistentDataPath + "/StraightnessResponse.csv").Length == 0)
+        {
             straightness_response_writer.WriteLine("Participant ID, Radius, Condition, Straightness");
         }
         position_writer = new StreamWriter(Application.persistentDataPath + "/Position.csv", true, new UTF8Encoding());
-        if (new FileInfo(Application.persistentDataPath + "/Position.csv").Length == 0) {
+        if (new FileInfo(Application.persistentDataPath + "/Position.csv").Length == 0)
+        {
             position_writer.WriteLine("Participant ID, Radius, Condition, Position, Time");
         }
     }
 
-    void Start() 
+    void Start()
     {
         // Init Variables
         // Initialization();
 
-        isResponding = true;
+        isResponding = false;
         DirectionInstructionWindow.SetActive(true);
     }
 
@@ -258,31 +237,35 @@ public class Render : MonoBehaviour
     void Update()
     {
         // Testing Variable Update
-        //VW.SetActive(ViewVisualWall);
+        VW.SetActive(ViewVisualWall);
         VF.SetActive(true);
         SL.SetActive(true);
         EL.SetActive(true);
-        VL.SetActive(false);
-
         TestingObjectsViewUpdate();
 
-        if (!isResponding) {
-        // Rendering Algorithm Update
-        VisionRendering();  
-        if (td > p && td - p < 0.1f) {
-            position_writer.WriteLine(participant_id+", "+r+", "+WithServo+", \"("+String.Join(", ",position)+")\", \"("+String.Join(", ",time)+")\"");
-            position_writer.Flush();
-            isResponding = true;
-            StraightnessQuestionnaireWindow.SetActive(true);
-            return;
-        } else {
-            position.Add(U.centerEyeAnchor.transform.position);
-            time.Add(Time.time);
+        if (!isResponding)
+        {
+            // Rendering Algorithm Update
+            VisionRendering();
+            if (td > p && td - p < 0.1f)
+            {
+                position_writer.WriteLine(participant_id + ", " + r + ", " + WithServo + ", \"(" + String.Join(", ", position) + ")\", \"(" + String.Join(", ", time) + ")\"");
+                position_writer.Flush();
+                isResponding = true;
+                StraightnessQuestionnaireWindow.SetActive(true);
+                return;
+            }
+            else
+            {
+                position.Add(U.centerEyeAnchor.transform.position);
+                time.Add(Time.time);
+            }
+            HapticRendering();  // Dependent on Vision Rendering Algorithm
         }
-        HapticRendering();  // Dependent on Vision Rendering Algorithm
-        } else {
+        else
+        {
             ScreenUpdate();
-            //VW.SetActive(false);
+            VW.SetActive(false);
             VF.SetActive(false);
             SL.SetActive(false);
             EL.SetActive(false);
@@ -301,16 +284,18 @@ public class Render : MonoBehaviour
             WithServo = c.Item2;
             Cases.RemoveAt(0);
             // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
-            HW.transform.localScale = new Vector3(r*2, h, r*2); 
+            HW.transform.localScale = new Vector3(r * 2, h, r * 2);
             HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.centerEyeAnchor.transform.right * (r + d);
             // Reset Sum of Travel Angle and Relative Angle from Previous Projected Vector
-            theta = 0;  
+            theta = 0;
             V_vec = new Vector3(U.centerEyeAnchor.transform.position.x - HW.transform.position.x, 0, U.centerEyeAnchor.transform.position.z - HW.transform.position.z);
             ptheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
             position = new List<Vector3>();
             time = new List<float>();
             isResponding = false;
-        } else {
+        }
+        else
+        {
             straightness_response_writer.Flush();
             straightness_response_writer.Close();
             position_writer.Flush();
@@ -318,7 +303,7 @@ public class Render : MonoBehaviour
             Debug.Log("No more case, terminating experiment");
             Application.Quit();
         }
- }
+    }
 
     void VisionRendering()
     {
@@ -332,15 +317,15 @@ public class Render : MonoBehaviour
 
         // 3. Get clockwize Tangent Unit Vector on the surface of Haptic Wall at Projected Point using absolute Up direction, and Projected Vector.
         T_hat = Vector3.Cross(r_d * Vector3.up, V_vec.normalized);
-        
+
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to Projected Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
-        //VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
-        //VF.transform.rotation = VW.transform.rotation;
+        VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
+        VF.transform.rotation = VW.transform.rotation;
 
         // 5. Get User Relative Angle from z component and x component of Project Vector in -PI to PI scale.
         ctheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
         diff = ctheta - ptheta;
-        diff += (diff > Mathf.PI) ? -2 * Mathf.PI : (diff < -Mathf.PI) ?  2 * Mathf.PI : 0; // Convert to -PI to PI scale
+        diff += (diff > Mathf.PI) ? -2 * Mathf.PI : (diff < -Mathf.PI) ? 2 * Mathf.PI : 0; // Convert to -PI to PI scale
         theta += diff;
         ptheta = ctheta;
 
@@ -351,66 +336,68 @@ public class Render : MonoBehaviour
         S_vec = td * T_hat;
 
         // 8. Set Virtual Wall and Visual Floor position to where Projected Point is shifted with Shifting Direction Vector. so the user is feeling as if they are walking on straight path, event though they were walking along surface of Haptic Wall.
-        //VW.transform.position = P + S_vec;
-        //VF.transform.position = VW.transform.position;
-        //VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
-        Vector3 lineStart = P + r_d * V_vec.normalized * d + S_vec;
-        DrawCurvedPath(lineStart, r + d, td, T_hat, curveSegmentCount);
-
+        VW.transform.position = P + S_vec;
+        VF.transform.position = VW.transform.position;
+        VW.transform.position = new Vector3(VW.transform.position.x, h / 2, VW.transform.position.z);
 
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
-        //SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
+        SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
 
         // 10. Set End Indicator position to anti-clockwize Tangent Unit Vector direction with path magnitude from Start Indicator.
-        //EL.transform.position = SL.transform.position - p * T_hat;
-
-        SL.transform.position = lineStart;
-        EL.transform.position = lineStart - p * T_hat;
+        EL.transform.position = SL.transform.position - p * T_hat;
 
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
         // Else, Visual Left Hand stays at Actual Left Hand position.
-        Vector3 AP_vec = new Vector3(AH.PointerPose.localPosition.x,0,AH.PointerPose.localPosition.z) - P;
+        Vector3 AP_vec = new Vector3(AH.PointerPose.localPosition.x, 0, AH.PointerPose.localPosition.z) - P;
         // AP_vec += V_vec.normalized * 0.04f;
         AH.UseRenderPosition = UseRenderPosition;
-        if (Vector3.Dot(AP_vec,V_vec.normalized) * r_d> 0) {
+        if (Vector3.Dot(AP_vec, V_vec.normalized) * r_d > 0)
+        {
             // AH.RenderPosition is VH position
             AH.RenderPosition = AH.PointerPose.localPosition;
             AS.transform.position = AH.PointerPose.position;
             VS.transform.position = AH.PointerPose.position;
         }
-        else {
+        else
+        {
             // AH.RenderPosition is VH position
-            AH.RenderPosition = AH.PointerPose.localPosition - Vector3.Dot(AP_vec,V_vec.normalized)*V_vec.normalized;    
+            AH.RenderPosition = AH.PointerPose.localPosition - Vector3.Dot(AP_vec, V_vec.normalized) * V_vec.normalized;
             AS.transform.position = AH.PointerPose.position;
-            VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec,V_vec.normalized)*V_vec.normalized;
+            VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec, V_vec.normalized) * V_vec.normalized;
         }
-        
-    } 
 
-    void HapticRendering() {
+    }
+
+    void HapticRendering()
+    {
         /// Visual Hand and Sphere Rendering
         // 1. if Acutal Left Hand is inside Haptic Wall, then Haptic Left Hand position is projected on closet point on surface of Haptic Wall from Actual Left Hand position.
         // Else, Haptic Left Hand stays at Actual Left Hand position.
-        Vector3 AW = new Vector3(AH.PointerPose.position.x,0,AH.PointerPose.position.z) - new Vector3(HW.transform.position.x,0,HW.transform.position.z);
-        Debug.Log("AW.magnitude: "+AW.magnitude+", Mathf.Abs(r)-d: "+(Mathf.Abs(r)-d));
+        Vector3 AW = new Vector3(AH.PointerPose.position.x, 0, AH.PointerPose.position.z) - new Vector3(HW.transform.position.x, 0, HW.transform.position.z);
+        Debug.Log("AW.magnitude: " + AW.magnitude + ", Mathf.Abs(r)-d: " + (Mathf.Abs(r) - d));
         float r_d = r / Mathf.Abs(r);
 
-        if (AW.magnitude * r_d > r) {
+        if (AW.magnitude * r_d > r)
+        {
             HS.transform.position = AH.PointerPose.position;
-        } else {
+        }
+        else
+        {
             HS.transform.position = new Vector3(HW.transform.position.x, AH.PointerPose.position.y, HW.transform.position.z) + AW.normalized * Mathf.Abs(r);
             // HS.transform.position = new Vector3(0,0,0);
         }
-        
+
         // 2. After Haptic Left Hand calculation done, distance between Actual Left Hand and Haptic Left Hand will be sent to my device to display force based on its magnitude.
         SendServoPosition((HS.transform.position - AS.transform.position).magnitude);
     }
 
-    private void SendServoPosition(float diff) {
+    private void SendServoPosition(float diff)
+    {
         int calibrate = 50;
         int servoPosition = 125 + calibrate;
-        if (WithServo) {
+        if (WithServo)
+        {
             if (0.0f < diff && diff < 0.06f)
             {
                 servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, diff / 0.06f)) + calibrate;
@@ -424,7 +411,8 @@ public class Render : MonoBehaviour
         udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
     }
 
-    public void StraightnessResponse(float response) {
+    public void StraightnessResponse(float response)
+    {
         // if (STRAIGHT- 0.1 < response && response < STRAIGHT+0.1) {
         // straightness_response_writer.WriteLine(participant_id+", STRAIGHT, "+WithServo+", "+response);
         // } else {
@@ -432,20 +420,21 @@ public class Render : MonoBehaviour
         // }
 
         // StraightnessQuestionnaireWindow.SetActive(false); // this is causing error somehow
-        straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
+        straightness_response_writer.WriteLine(participant_id + ", " + r + ", " + WithServo + ", " + response);
         straightness_response_writer.Flush();
         // Pop Window For User to Take Off Headset and Take a Presence Survey
-        PresenceInstructionText.text = "Please Take Off Your Headset To Complete A Survey.\n(Your User ID: "+participant_id+")\nDO NOT CLICK ON BUTTON BELOW BEFORE COMPLETING SURVEY!";
+        PresenceInstructionText.text = "Please Take Off Your Headset To Complete A Survey.\n(Your User ID: " + participant_id + ")\nDO NOT CLICK ON BUTTON BELOW BEFORE COMPLETING SURVEY!";
         PresenceInstructionWindow.SetActive(true);
         // if (Cases.Count % n_radius == 0) {
         // } else {
         //     // Initialization();
         //     DirectionInstructionWindow.SetActive(true);
         // }
-        
+
     }
 
-    public void PresenceCompletion() {
+    public void PresenceCompletion()
+    {
         PresenceInstructionWindow.SetActive(false);
         // Initialization();
         DirectionInstructionWindow.SetActive(true);
