@@ -44,8 +44,13 @@ public class Render : MonoBehaviour
     /// <summary> Haptic Wall </summary>
     public GameObject HW;
     /// <summary> Visual Wall </summary>
-    public GameObject VW;
+    //public GameObject VW;
     /// <summary> Visual Floor </summary>
+   
+    public GameObject VL; // Virtual Line or Path
+    private LineRenderer lineRenderer;
+    public int curveSegmentCount = 20;
+
     public GameObject VF; 
     /// <summary> Start Location Indicator </summary>
     public GameObject SL;
@@ -127,6 +132,34 @@ public class Render : MonoBehaviour
     private List<float> time;
 
     private bool isResponding;
+
+    void DrawCurvedPath(Vector3 startPoint, float radius, float arcLength, Vector3 normal, int segments)
+    {
+        float angleTotal = arcLength / radius;
+        float angleStep = angleTotal / (segments - 1);
+        Vector3[] positions = new Vector3[segments];
+
+        for (int i = 0; i < segments; i++)
+        {
+            float theta = angleStep * i;
+            float z = Mathf.Sin(theta) * radius;
+            float x = Mathf.Cos(theta) * radius;
+
+            // Align with theta = 0
+            z -= Mathf.Sin(0) * radius;
+            x -= Mathf.Cos(0) * radius;
+
+            Vector3 localPoint = new Vector3(x, 0f, z);
+            // Rotate to align with real-world curve direction
+            Quaternion rotation = Quaternion.LookRotation(Vector3.Cross(normal, Vector3.up));
+            Vector3 worldPoint = rotation * localPoint + startPoint;
+
+            positions[i] = worldPoint;
+        }
+
+        lineRenderer.positionCount = segments;
+        lineRenderer.SetPositions(positions);
+    }
 
     /**
       *  Testing Objects Display Status Update
@@ -225,10 +258,12 @@ public class Render : MonoBehaviour
     void Update()
     {
         // Testing Variable Update
-        VW.SetActive(ViewVisualWall);
+        //VW.SetActive(ViewVisualWall);
         VF.SetActive(true);
         SL.SetActive(true);
         EL.SetActive(true);
+        VL.SetActive(false);
+
         TestingObjectsViewUpdate();
 
         if (!isResponding) {
@@ -247,7 +282,7 @@ public class Render : MonoBehaviour
         HapticRendering();  // Dependent on Vision Rendering Algorithm
         } else {
             ScreenUpdate();
-            VW.SetActive(false);
+            //VW.SetActive(false);
             VF.SetActive(false);
             SL.SetActive(false);
             EL.SetActive(false);
@@ -299,8 +334,8 @@ public class Render : MonoBehaviour
         T_hat = Vector3.Cross(r_d * Vector3.up, V_vec.normalized);
         
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to Projected Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
-        VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
-        VF.transform.rotation = VW.transform.rotation;
+        //VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
+        //VF.transform.rotation = VW.transform.rotation;
 
         // 5. Get User Relative Angle from z component and x component of Project Vector in -PI to PI scale.
         ctheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
@@ -316,15 +351,21 @@ public class Render : MonoBehaviour
         S_vec = td * T_hat;
 
         // 8. Set Virtual Wall and Visual Floor position to where Projected Point is shifted with Shifting Direction Vector. so the user is feeling as if they are walking on straight path, event though they were walking along surface of Haptic Wall.
-        VW.transform.position = P + S_vec;
-        VF.transform.position = VW.transform.position;
-        VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
+        //VW.transform.position = P + S_vec;
+        //VF.transform.position = VW.transform.position;
+        //VW.transform.position = new Vector3(VW.transform.position.x, h/2, VW.transform.position.z);
+        Vector3 lineStart = P + r_d * V_vec.normalized * d + S_vec;
+        DrawCurvedPath(lineStart, r + d, td, T_hat, curveSegmentCount);
+
 
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
-        SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
+        //SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
 
         // 10. Set End Indicator position to anti-clockwize Tangent Unit Vector direction with path magnitude from Start Indicator.
-        EL.transform.position = SL.transform.position - p * T_hat;
+        //EL.transform.position = SL.transform.position - p * T_hat;
+
+        SL.transform.position = lineStart;
+        EL.transform.position = lineStart - p * T_hat;
 
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
