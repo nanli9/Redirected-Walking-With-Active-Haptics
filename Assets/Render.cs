@@ -47,7 +47,7 @@ public class Render : MonoBehaviour
     /// <summary> Haptic Wall </summary>
     public GameObject HW;
     /// <summary> Visual Wall </summary>
-    public GameObject VW;
+    public GameObject VLAnchor;
     /// <summary> Visual Floor </summary>
     public GameObject VF;
     /// <summary> Start Location Indicator </summary>
@@ -237,7 +237,7 @@ public class Render : MonoBehaviour
     void Update()
     {
         // Testing Variable Update
-        VW.SetActive(ViewVisualWall);
+        VLAnchor.SetActive(ViewVisualWall);
         VF.SetActive(true);
         SL.SetActive(true);
         EL.SetActive(true);
@@ -265,7 +265,7 @@ public class Render : MonoBehaviour
         else
         {
             ScreenUpdate();
-            VW.SetActive(false);
+            VLAnchor.SetActive(false);
             VF.SetActive(false);
             SL.SetActive(false);
             EL.SetActive(false);
@@ -319,8 +319,8 @@ public class Render : MonoBehaviour
         T_hat = Vector3.Cross(r_d * Vector3.up, V_vec.normalized);
 
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to Projected Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
-        VW.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
-        VF.transform.rotation = VW.transform.rotation;
+        VLAnchor.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
+        VF.transform.rotation = VLAnchor.transform.rotation;
 
         // 5. Get User Relative Angle from z component and x component of Project Vector in -PI to PI scale.
         ctheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
@@ -336,9 +336,12 @@ public class Render : MonoBehaviour
         S_vec = td * T_hat;
 
         // 8. Set Virtual Wall and Visual Floor position to where Projected Point is shifted with Shifting Direction Vector. so the user is feeling as if they are walking on straight path, event though they were walking along surface of Haptic Wall.
-        VW.transform.position = P + S_vec;
-        VF.transform.position = VW.transform.position;
-        VW.transform.position = new Vector3(VW.transform.position.x, h / 2, VW.transform.position.z);
+        VLAnchor.transform.position = P + S_vec;
+        VF.transform.position = VLAnchor.transform.position;
+        VLAnchor.transform.position = new Vector3(VLAnchor.transform.position.x, h / 2, VLAnchor.transform.position.z);
+
+
+        VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(T_hat, p, 0.5f);
 
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
         SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
