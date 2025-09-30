@@ -319,7 +319,7 @@ public class Render : MonoBehaviour
         T_hat = Vector3.Cross(r_d * Vector3.up, V_vec.normalized);
 
         // 4. Match Quaternion of Visual Wall and Quaternion of Visual Floor to Projected Unit Vector direction using Unity Quaternion.LookRotation method. Please Expand this to actual formula instead of Unity predefinded method
-        VLAnchor.transform.rotation = Quaternion.LookRotation(V_vec.normalized, Vector3.up);
+        VLAnchor.transform.rotation = Quaternion.LookRotation(T_hat.normalized, Vector3.up);
         VF.transform.rotation = VLAnchor.transform.rotation;
 
         // 5. Get User Relative Angle from z component and x component of Project Vector in -PI to PI scale.
@@ -338,16 +338,22 @@ public class Render : MonoBehaviour
         // 8. Set Virtual Wall and Visual Floor position to where Projected Point is shifted with Shifting Direction Vector. so the user is feeling as if they are walking on straight path, event though they were walking along surface of Haptic Wall.
         VLAnchor.transform.position = P + S_vec;
         VF.transform.position = VLAnchor.transform.position;
-        VLAnchor.transform.position = new Vector3(VLAnchor.transform.position.x, h / 2, VLAnchor.transform.position.z);
+        VLAnchor.transform.position = new Vector3(VLAnchor.transform.position.x, 0.0f, VLAnchor.transform.position.z);
 
 
-        VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(T_hat, p, 0.5f);
+        VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(-T_hat, 10.0f, 2.0f);
 
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
-        SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
+        //SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
 
         // 10. Set End Indicator position to anti-clockwize Tangent Unit Vector direction with path magnitude from Start Indicator.
-        EL.transform.position = SL.transform.position - p * T_hat;
+        //EL.transform.position = SL.transform.position - p * T_hat;
+
+        // Start = just in front of anchor along tangent
+        SL.transform.position = VLAnchor.transform.position + T_hat.normalized * d;
+
+        // End = path length forward along tangent
+        EL.transform.position = SL.transform.position - T_hat.normalized * p;
 
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
