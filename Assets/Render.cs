@@ -341,7 +341,7 @@ public class Render : MonoBehaviour
         VLAnchor.transform.position = new Vector3(VLAnchor.transform.position.x, 0.0f, VLAnchor.transform.position.z);
 
 
-        VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(-T_hat, 10.0f, 2.0f);
+        VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(-T_hat, 100.0f, 2.0f);
 
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
         //SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
@@ -353,7 +353,7 @@ public class Render : MonoBehaviour
         SL.transform.position = VLAnchor.transform.position + T_hat.normalized * d;
 
         // End = path length forward along tangent
-        EL.transform.position = SL.transform.position - T_hat.normalized * p;
+        EL.transform.position = SL.transform.position - T_hat.normalized * 30.0f;
 
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
