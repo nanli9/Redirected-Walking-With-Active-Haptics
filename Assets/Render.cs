@@ -351,7 +351,7 @@ public class Render : MonoBehaviour
         //EL.transform.position = SL.transform.position - p * T_hat;
 
         // Start = just in front of anchor along tangent
-        SL.transform.position = VLAnchor.transform.position + T_hat.normalized * d;
+        SL.transform.position = VLAnchor.transform.position + T_hat.normalized * 3;
 
         // End = path length forward along tangent
         EL.transform.position = SL.transform.position - T_hat.normalized * 30.0f;
