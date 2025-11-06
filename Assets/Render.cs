@@ -228,8 +228,8 @@ public class Render : MonoBehaviour
     {
         // Init Variables
         //Initialization();
-        Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
-
+        //Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
+         Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
         isResponding = false;
         DirectionInstructionWindow.SetActive(true);
     }
