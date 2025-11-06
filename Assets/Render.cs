@@ -227,7 +227,8 @@ public class Render : MonoBehaviour
     void Start()
     {
         // Init Variables
-        // Initialization();
+        //Initialization();
+        Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
 
         isResponding = false;
         DirectionInstructionWindow.SetActive(true);
