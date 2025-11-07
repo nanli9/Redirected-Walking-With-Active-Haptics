@@ -32,6 +32,8 @@ public static class IListExtensions
 
 public class Render : MonoBehaviour
 {
+    [SerializeField]
+    public Vector3 cameraOffset = new Vector3(2.5f, 0f, 0f); // Set this in Inspector
     /// <summary> User(OVRCameraRig.CenterEyeAnchor) </summary>
     public OVRCameraRig U;
     /// <summary> Actual Hand </summary>
@@ -227,16 +229,20 @@ public class Render : MonoBehaviour
     void Start()
     {
         // Init Variables
-        //Initialization();
+        Initialization();
         //Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
-         Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
-        isResponding = false;
+        Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
+
+        r = 21.0f;
+
+        isResponding = true;
         DirectionInstructionWindow.SetActive(true);
     }
 
     // Update is called once per frame
     void Update()
     {
+        //r = 21.0f;
         // Testing Variable Update
         VLAnchor.SetActive(ViewVisualWall);
         VF.SetActive(true);
@@ -344,6 +350,14 @@ public class Render : MonoBehaviour
 
         VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(-T_hat, 100.0f, 2.0f);
 
+        Vector3 anchorPos = P + S_vec;  // anchored at wall surface tangent
+        Quaternion anchorRot = Quaternion.LookRotation(T_hat, Vector3.up);
+
+        // Apply to VLAnchor
+        VLAnchor.transform.SetPositionAndRotation(anchorPos, anchorRot);
+        VF.transform.SetPositionAndRotation(anchorPos, anchorRot);
+
+
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
         //SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
 
@@ -351,10 +365,13 @@ public class Render : MonoBehaviour
         //EL.transform.position = SL.transform.position - p * T_hat;
 
         // Start = just in front of anchor along tangent
-        SL.transform.position = VLAnchor.transform.position + T_hat.normalized * 3;
+        SL.transform.position = VLAnchor.transform.position + T_hat.normalized * d;
 
         // End = path length forward along tangent
         EL.transform.position = SL.transform.position - T_hat.normalized * 30.0f;
+
+
+        VLAnchor.transform.position +=  VLAnchor.transform.rotation * cameraOffset;
 
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
