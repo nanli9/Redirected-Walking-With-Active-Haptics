@@ -102,6 +102,8 @@ public class Render : MonoBehaviour
     /// <summary> Remote Servo Condition Switch </summary>
     private bool WithServo;
 
+    [SerializeField] public Transform sceneRoot;
+
     private List<Tuple<float, bool>> Cases;
     private int n_radius;
 
@@ -113,6 +115,9 @@ public class Render : MonoBehaviour
     private StreamWriter presence_response_writer;
     private StreamWriter immersion_response_writer;
     private StreamWriter sickness_response_writer;
+
+    // This stores how much we "twist" the virtual world so current view becomes new forward
+    private Quaternion recenterOffset = Quaternion.identity;
 
     public bool UseRenderPosition = true;
     public bool ViewTestingObjects = true;
@@ -164,7 +169,57 @@ public class Render : MonoBehaviour
         DirectionInstructionWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
     }
 
+    private void CalibrateVirtualPathToReal()
+    {
+        if (sceneRoot == null)
+        {
+            Debug.LogWarning("[Calibrate] sceneRoot is not assigned.");
+            return;
+        }
 
+        Transform cam = U.centerEyeAnchor.transform;
+
+        // 1. Real-world direction: where the user is currently looking (yaw only)
+        Vector3 realDir = cam.forward;
+        realDir.y = 0f;
+        if (realDir.sqrMagnitude < 0.0001f)
+        {
+            Debug.LogWarning("[Calibrate] Camera forward too small.");
+            return;
+        }
+        realDir.Normalize();
+
+        // 2. Virtual path direction: how your current virtual path is oriented.
+        // If your line/path is drawn along another axis, adjust this accordingly.
+        Vector3 virtualDir = VLAnchor.transform.forward;
+        virtualDir.y = 0f;
+        if (virtualDir.sqrMagnitude < 0.0001f)
+        {
+            Debug.LogWarning("[Calibrate] VLAnchor forward too small.");
+            return;
+        }
+        virtualDir.Normalize();
+
+        // 3. Compute how much to rotate the VIRTUAL WORLD so that:
+        // virtualDir --> realDir
+        float angle = Vector3.SignedAngle(virtualDir, realDir, Vector3.up);
+
+        // 4. Rotate entire scene around the user's position
+        sceneRoot.RotateAround(cam.position, Vector3.up, angle);
+
+        
+        // Recompute current projected vector from HW -> user (XZ)
+        V_vec = new Vector3(cam.position.x - HW.transform.position.x, 0f,
+                            cam.position.z - HW.transform.position.z);
+
+        // Reset integrators so S_vec starts at 0 this frame
+        ptheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
+        theta  = 0f;
+        td     = 0f;
+        S_vec  = Vector3.zero;
+
+        Debug.Log($"[Calibrate] Rotated scene by {angle:F2} degrees to align virtual path with real path.");
+    }
     /**
       *  Start is called before the first frame update
       */
@@ -233,8 +288,6 @@ public class Render : MonoBehaviour
         //Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
         Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
 
-        r = 21.0f;
-
         isResponding = true;
         DirectionInstructionWindow.SetActive(true);
     }
@@ -242,7 +295,11 @@ public class Render : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //r = 21.0f;
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            CalibrateVirtualPathToReal();
+        }
+
         // Testing Variable Update
         VLAnchor.SetActive(ViewVisualWall);
         VF.SetActive(true);
@@ -279,6 +336,7 @@ public class Render : MonoBehaviour
             AH.UseRenderPosition = false;
             SendServoPosition(0.0f);
         }
+
     }
 
     public void Initialization()
@@ -288,6 +346,10 @@ public class Render : MonoBehaviour
         {
             var c = Cases[0];
             r = c.Item1;
+
+            r = 10.0f;
+
+
             WithServo = c.Item2;
             Cases.RemoveAt(0);
             // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
@@ -357,6 +419,7 @@ public class Render : MonoBehaviour
         VLAnchor.transform.SetPositionAndRotation(anchorPos, anchorRot);
         VF.transform.SetPositionAndRotation(anchorPos, anchorRot);
 
+        VLAnchor.transform.position +=  cameraOffset;
 
         // 9. Set Start Indicator position to Projected Unit Vector direction with initial distance magnitude from Virtual Wall. 
         //SL.transform.position = P + r_d * V_vec.normalized * d + S_vec;
@@ -365,13 +428,27 @@ public class Render : MonoBehaviour
         //EL.transform.position = SL.transform.position - p * T_hat;
 
         // Start = just in front of anchor along tangent
-        SL.transform.position = VLAnchor.transform.position + T_hat.normalized * d;
+        //SL.transform.position = VLAnchor.transform.position + T_hat.normalized * d;
 
         // End = path length forward along tangent
-        EL.transform.position = SL.transform.position - T_hat.normalized * 30.0f;
+        //EL.transform.position = SL.transform.position - T_hat.normalized * 30.0f;
+
+        //SL.transform.position += new Vector3(0.0f, 0.5f, 0f);
+        //EL.transform.position += new Vector3(0.0f, 0.5f, 0f);
 
 
-        VLAnchor.transform.position +=  VLAnchor.transform.rotation * cameraOffset;
+        // 3) Place SL/EL in WORLD space using **consistent forward sign**
+        Vector3 SL_world = P + r_d * V_vec.normalized * d + S_vec;
+        Vector3 EL_world = SL_world + (/* choose sign */ +1f) * T_hat * p * 5.0f; // use +T_hat for “ahead”
+
+        // Optional lift
+        SL_world += Vector3.up * 0.5f;
+        EL_world += Vector3.up * 0.5f;
+
+        SL.transform.position = SL_world;
+        SL.transform.rotation = VLAnchor.transform.rotation;
+        EL.transform.position = EL_world;
+        EL.transform.rotation = VLAnchor.transform.rotation;
 
         /// Visual Hand and Sphere Rendering
         // 1. if Visual Wall is in between Actual Left Hand and User position, then Visual Left Hand position is projected on closet point on surface of Visual Wall from Actual Left Hand position.
@@ -466,4 +543,5 @@ public class Render : MonoBehaviour
         // Initialization();
         DirectionInstructionWindow.SetActive(true);
     }
+
 }
