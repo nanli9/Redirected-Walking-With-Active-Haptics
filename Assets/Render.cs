@@ -208,6 +208,13 @@ public class Render : MonoBehaviour
         sceneRoot.RotateAround(cam.position, Vector3.up, angle);
 
         
+        // Slide world so SL is under camera (XZ only)
+        Vector3 camPos = U.centerEyeAnchor.transform.position;
+        Vector3 slPos  = SL.transform.position;
+        Vector3 deltaXZ = new Vector3(slPos.x - camPos.x, 0f, slPos.z - camPos.z);
+        sceneRoot.position -= deltaXZ;
+
+
         // Recompute current projected vector from HW -> user (XZ)
         V_vec = new Vector3(cam.position.x - HW.transform.position.x, 0f,
                             cam.position.z - HW.transform.position.z);
@@ -288,7 +295,7 @@ public class Render : MonoBehaviour
         //Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
         Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
 
-        isResponding = true;
+        isResponding = false;
         DirectionInstructionWindow.SetActive(true);
     }
 
