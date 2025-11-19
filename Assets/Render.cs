@@ -32,8 +32,21 @@ public static class IListExtensions
 
 public class Render : MonoBehaviour
 {
+    //user study
+    public enum ConditionType
+    {
+        LC, LV, RC, RV,
+        BLC, BRC, BLV, BRV,
+        NR, NL
+    }
+    [Header("Condition Cases")]
+    public ConditionType selectedCondition;   // <-- dropdown in Inspector
+    public float staircaseStep;
+    private float curvatureGain;
+    public int UserNumber;
+    private int trialNumber;
     [SerializeField]
-    public Vector3 cameraOffset = new Vector3(2.5f, 0f, 0f); // Set this in Inspector
+    private Vector3 cameraOffset = new Vector3(2.5f, 0f, 0f); // Set this in Inspector
     /// <summary> User(OVRCameraRig.CenterEyeAnchor) </summary>
     public OVRCameraRig U;
     /// <summary> Actual Hand </summary>
@@ -57,14 +70,6 @@ public class Render : MonoBehaviour
     /// <summary> End Location Indicator </summary>
     public GameObject EL;
 
-    /// <summary> Straightness Quesionnaire Window </summary>
-    public GameObject StraightnessQuestionnaireWindow;
-    /// <summary> Presence Instruction Window </summary>
-    public GameObject PresenceInstructionWindow;
-    public TextMeshPro PresenceInstructionText;
-    /// <summary> Direction Instruction Window </summary>
-    public GameObject DirectionInstructionWindow;
-
     /// <summary> Straightness Radius </summary>
     private static readonly float STRAIGHT = 1000000.0f;
     /// <summary> Height Of All Walls </summary>
@@ -76,11 +81,9 @@ public class Render : MonoBehaviour
     /// <summary> Allowed Radius </summary>
     // private static readonly float[] _r = {5.0f, 7.0f, 10.0f, 14.0f, 19.0f, 25.0f}; 
     private static readonly float[] _r = { 7.0f, 14.0f, 21.0f };
-    // private static readonly float[] _r = {-7.0f,-14.0f,-21.0f};
-
     // private static readonly float[] _r = {7f,-7f};
     /// <summary> [Placeholder] Current Radius </summary>
-    private float r;
+    public float r;
     /// <summary> [Placeholder] Projected Vector From Center Of Actual Wall(AW) To User(U)</summary>
     private Vector3 V_vec;
     /// <summary> [Placeholder] Sum Of Travel Angle </summary>
@@ -102,6 +105,10 @@ public class Render : MonoBehaviour
     /// <summary> Remote Servo Condition Switch </summary>
     private bool WithServo;
 
+    
+    private float sign;
+
+
     [SerializeField] public Transform sceneRoot;
 
     private List<Tuple<float, bool>> Cases;
@@ -115,6 +122,8 @@ public class Render : MonoBehaviour
     private StreamWriter presence_response_writer;
     private StreamWriter immersion_response_writer;
     private StreamWriter sickness_response_writer;
+
+    private StreamWriter curvatureGain_writer;
 
     // This stores how much we "twist" the virtual world so current view becomes new forward
     private Quaternion recenterOffset = Quaternion.identity;
@@ -136,8 +145,117 @@ public class Render : MonoBehaviour
     private List<Vector3> position;
     private List<float> time;
 
-    private bool isResponding;
+    private void OnValidate()
+    {
+        // Called anytime the dropdown changes in the Inspector
+        HandleConditionChange(selectedCondition);
+    }
 
+    private void HandleConditionChange(ConditionType condition)
+    {
+        Debug.Log("Selected Condition: " + condition);
+
+        switch (condition)
+        {
+            case ConditionType.LC:
+                Debug.Log("LC selected");
+                break;
+
+            case ConditionType.LV:
+                Debug.Log("LV selected");
+                break;
+
+            case ConditionType.RC:
+                Debug.Log("RC selected");
+                break;
+
+            case ConditionType.RV:
+                Debug.Log("RV selected");
+                break;
+
+            case ConditionType.BLC:
+                Debug.Log("BLC selected");
+                break;
+
+            case ConditionType.BRC:
+                Debug.Log("BRC selected");
+                break;
+
+            case ConditionType.BLV:
+                Debug.Log("BLV selected");
+                break;
+
+            case ConditionType.BRV:
+                Debug.Log("BRV selected");
+                break;
+
+            case ConditionType.NR:
+                Debug.Log("VR selected");
+                break;
+
+            case ConditionType.NL:
+                Debug.Log("VL selected");
+                break;
+
+            default:
+                Debug.LogWarning("Unknown condition selected");
+                break;
+        }
+
+    }
+    private void IncreaseCurvatureGain()
+    {
+        curvatureGain += staircaseStep;
+        changeRadius();
+        staircaseStep /= 2;
+    }
+    private void DecreaseCurvatureGain()
+    {
+        curvatureGain -= staircaseStep;
+        changeRadius();
+        staircaseStep /= 2;
+    }
+    private void changeRadius()
+    {
+        trialNumber++;
+        if (Mathf.Approximately(curvatureGain, 0f))
+        {
+            r = STRAIGHT;                  // your "infinite" straight radius
+        }
+        else
+        {
+            r = sign * 1f / curvatureGain; // right = +, left = -
+        }
+
+        // 2) Resize haptic wall
+        HW.transform.localScale = new Vector3(r * 2f, h, r * 2f);
+
+        // 3) Reposition haptic wall so user is always (r + d) from its centre,
+        //    along their current right vector (wall on left/right of user).
+        Transform cam = U.centerEyeAnchor.transform;
+        Vector3 camPos   = cam.position;
+        Vector3 camRight = cam.right;
+
+        HW.transform.position = new Vector3(camPos.x, h, camPos.z) - camRight * (r + d);
+
+        // 4) Reset RDW integrators for the new radius
+        V_vec = new Vector3(
+            camPos.x - HW.transform.position.x,
+            0f,
+            camPos.z - HW.transform.position.z
+        );
+        theta = 0f;
+        td    = 0f;
+        ptheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
+        S_vec  = Vector3.zero;
+
+        // 5) Update virtual path with new geometry, then align it to the real view
+        VisionRendering();
+        CalibrateVirtualPathToReal();
+
+        curvatureGain_writer.WriteLine(UserNumber + ", "+ trialNumber + "," + selectedCondition.ToString() + ", " + curvatureGain);
+        curvatureGain_writer.Flush();
+    }
     /**
       *  Testing Objects Display Status Update
       */
@@ -157,16 +275,6 @@ public class Render : MonoBehaviour
             VS.layer = LayerMask.NameToLayer("TestingObject");
             HS.layer = LayerMask.NameToLayer("TestingObject");
         }
-    }
-
-    private void ScreenUpdate()
-    {
-        StraightnessQuestionnaireWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
-        StraightnessQuestionnaireWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
-        PresenceInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
-        PresenceInstructionWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
-        DirectionInstructionWindow.transform.position = U.centerEyeAnchor.transform.position + U.centerEyeAnchor.transform.forward * 0.4f;
-        DirectionInstructionWindow.transform.rotation = U.centerEyeAnchor.transform.rotation;
     }
 
     private void CalibrateVirtualPathToReal()
@@ -232,6 +340,7 @@ public class Render : MonoBehaviour
       */
     void Awake()
     {
+        /*
         // Create Cases
         Cases = new List<Tuple<float, bool>>();
         var Temp = new List<Tuple<float, bool>>();
@@ -286,17 +395,42 @@ public class Render : MonoBehaviour
         {
             position_writer.WriteLine("Participant ID, Radius, Condition, Position, Time");
         }
+        */
     }
 
     void Start()
     {
         // Init Variables
-        Initialization();
         //Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
         Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
+        sign = selectedCondition.ToString().Contains("L") ? -1 : 1;
 
-        isResponding = false;
-        DirectionInstructionWindow.SetActive(true);
+        curvatureGain = 0.0f;
+        //right is positive after press the space key
+        r = sign * STRAIGHT;
+        //DirectionInstructionWindow.SetActive(true);
+        trialNumber = 0;
+
+        // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
+        HW.transform.localScale = new Vector3(r * 2, h, r * 2);
+        HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.centerEyeAnchor.transform.right * (r + d);
+        // Reset Sum of Travel Angle and Relative Angle from Previous Projected Vector
+        theta = 0;
+        V_vec = new Vector3(U.centerEyeAnchor.transform.position.x - HW.transform.position.x, 0, U.centerEyeAnchor.transform.position.z - HW.transform.position.z);
+        ptheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
+        position = new List<Vector3>();
+        time = new List<float>();
+
+        //create the file and write title to the file
+        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd");
+        string filename = $"{UserNumber}_{selectedCondition}_{timestamp}.csv";
+        string fullPath = Path.Combine(Application.persistentDataPath, filename);
+        curvatureGain_writer = new StreamWriter(fullPath, true, new UTF8Encoding());
+        if (new FileInfo(fullPath).Length == 0)
+            curvatureGain_writer.WriteLine("UserNo, TrialNo, Condition, curvatureGain");
+
+        VisionRendering();
+        CalibrateVirtualPathToReal();
     }
 
     // Update is called once per frame
@@ -304,81 +438,42 @@ public class Render : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
+            //CalibrateVirtualPathToReal();
+            VisionRendering();
             CalibrateVirtualPathToReal();
         }
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            IncreaseCurvatureGain();
+        }
 
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            DecreaseCurvatureGain();
+        }
         // Testing Variable Update
         VLAnchor.SetActive(ViewVisualWall);
         VF.SetActive(true);
         SL.SetActive(true);
         EL.SetActive(true);
         TestingObjectsViewUpdate();
-
-        if (!isResponding)
+      
+        // Rendering Algorithm Update
+        VisionRendering();
+        /*
+        if (td > p && td - p < 0.1f)
         {
-            // Rendering Algorithm Update
-            VisionRendering();
-            if (td > p && td - p < 0.1f)
-            {
-                position_writer.WriteLine(participant_id + ", " + r + ", " + WithServo + ", \"(" + String.Join(", ", position) + ")\", \"(" + String.Join(", ", time) + ")\"");
-                position_writer.Flush();
-                isResponding = true;
-                StraightnessQuestionnaireWindow.SetActive(true);
-                return;
-            }
-            else
-            {
-                position.Add(U.centerEyeAnchor.transform.position);
-                time.Add(Time.time);
-            }
-            HapticRendering();  // Dependent on Vision Rendering Algorithm
-        }
-        else
-        {
-            ScreenUpdate();
-            VLAnchor.SetActive(false);
-            VF.SetActive(false);
-            SL.SetActive(false);
-            EL.SetActive(false);
-            AH.UseRenderPosition = false;
-            SendServoPosition(0.0f);
-        }
-
-    }
-
-    public void Initialization()
-    {
-        // Pop one at a time
-        if (Cases.Count > 0)
-        {
-            var c = Cases[0];
-            r = c.Item1;
-
-            r = 10.0f;
-
-
-            WithServo = c.Item2;
-            Cases.RemoveAt(0);
-            // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
-            HW.transform.localScale = new Vector3(r * 2, h, r * 2);
-            HW.transform.position = new Vector3(U.centerEyeAnchor.transform.position.x, h, U.centerEyeAnchor.transform.position.z) - U.centerEyeAnchor.transform.right * (r + d);
-            // Reset Sum of Travel Angle and Relative Angle from Previous Projected Vector
-            theta = 0;
-            V_vec = new Vector3(U.centerEyeAnchor.transform.position.x - HW.transform.position.x, 0, U.centerEyeAnchor.transform.position.z - HW.transform.position.z);
-            ptheta = Mathf.Atan2(V_vec.normalized.z, V_vec.normalized.x);
-            position = new List<Vector3>();
-            time = new List<float>();
-            isResponding = false;
-        }
-        else
-        {
-            straightness_response_writer.Flush();
-            straightness_response_writer.Close();
+            position_writer.WriteLine(participant_id + ", " + r + ", " + WithServo + ", \"(" + String.Join(", ", position) + ")\", \"(" + String.Join(", ", time) + ")\"");
             position_writer.Flush();
-            position_writer.Close();
-            Debug.Log("No more case, terminating experiment");
-            Application.Quit();
+            return;
         }
+        else
+        {
+            position.Add(U.centerEyeAnchor.transform.position);
+            time.Add(Time.time);
+        }
+        */
+
     }
 
     void VisionRendering()
@@ -417,7 +512,7 @@ public class Render : MonoBehaviour
         VLAnchor.transform.position = new Vector3(VLAnchor.transform.position.x, 0.0f, VLAnchor.transform.position.z);
 
 
-        VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(-T_hat, 100.0f, 2.0f);
+        //VLAnchor.GetComponent<VirtualLineAnchor>().DrawLines(-T_hat, 100.0f, 2.0f);
 
         Vector3 anchorPos = P + S_vec;  // anchored at wall surface tangent
         Quaternion anchorRot = Quaternion.LookRotation(T_hat, Vector3.up);
@@ -479,76 +574,4 @@ public class Render : MonoBehaviour
         }
 
     }
-
-    void HapticRendering()
-    {
-        /// Visual Hand and Sphere Rendering
-        // 1. if Acutal Left Hand is inside Haptic Wall, then Haptic Left Hand position is projected on closet point on surface of Haptic Wall from Actual Left Hand position.
-        // Else, Haptic Left Hand stays at Actual Left Hand position.
-        Vector3 AW = new Vector3(AH.PointerPose.position.x, 0, AH.PointerPose.position.z) - new Vector3(HW.transform.position.x, 0, HW.transform.position.z);
-        Debug.Log("AW.magnitude: " + AW.magnitude + ", Mathf.Abs(r)-d: " + (Mathf.Abs(r) - d));
-        float r_d = r / Mathf.Abs(r);
-
-        if (AW.magnitude * r_d > r)
-        {
-            HS.transform.position = AH.PointerPose.position;
-        }
-        else
-        {
-            HS.transform.position = new Vector3(HW.transform.position.x, AH.PointerPose.position.y, HW.transform.position.z) + AW.normalized * Mathf.Abs(r);
-            // HS.transform.position = new Vector3(0,0,0);
-        }
-
-        // 2. After Haptic Left Hand calculation done, distance between Actual Left Hand and Haptic Left Hand will be sent to my device to display force based on its magnitude.
-        SendServoPosition((HS.transform.position - AS.transform.position).magnitude);
-    }
-
-    private void SendServoPosition(float diff)
-    {
-        int calibrate = 50;
-        int servoPosition = 125 + calibrate;
-        if (WithServo)
-        {
-            if (0.0f < diff && diff < 0.06f)
-            {
-                servoPosition = Mathf.RoundToInt(Mathf.Lerp(105f, 85f, diff / 0.06f)) + calibrate;
-            }
-            else if (0.06f <= diff)
-            {
-                servoPosition = 85 + calibrate;
-            }
-        }
-        byte[] servoPositionBytes = BitConverter.GetBytes(servoPosition);
-        udpClient.Send(servoPositionBytes, servoPositionBytes.Length, remoteEndPoint);
-    }
-
-    public void StraightnessResponse(float response)
-    {
-        // if (STRAIGHT- 0.1 < response && response < STRAIGHT+0.1) {
-        // straightness_response_writer.WriteLine(participant_id+", STRAIGHT, "+WithServo+", "+response);
-        // } else {
-        // straightness_response_writer.WriteLine(participant_id+", "+r+", "+WithServo+", "+response);
-        // }
-
-        // StraightnessQuestionnaireWindow.SetActive(false); // this is causing error somehow
-        straightness_response_writer.WriteLine(participant_id + ", " + r + ", " + WithServo + ", " + response);
-        straightness_response_writer.Flush();
-        // Pop Window For User to Take Off Headset and Take a Presence Survey
-        PresenceInstructionText.text = "Please Take Off Your Headset To Complete A Survey.\n(Your User ID: " + participant_id + ")\nDO NOT CLICK ON BUTTON BELOW BEFORE COMPLETING SURVEY!";
-        PresenceInstructionWindow.SetActive(true);
-        // if (Cases.Count % n_radius == 0) {
-        // } else {
-        //     // Initialization();
-        //     DirectionInstructionWindow.SetActive(true);
-        // }
-
-    }
-
-    public void PresenceCompletion()
-    {
-        PresenceInstructionWindow.SetActive(false);
-        // Initialization();
-        DirectionInstructionWindow.SetActive(true);
-    }
-
 }

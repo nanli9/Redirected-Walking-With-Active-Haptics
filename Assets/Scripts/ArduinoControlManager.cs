@@ -9,8 +9,8 @@ public class ArduinoControlManager : MonoBehaviour
     public bool isRight = true;   
     private bool leftWasPressed = false;
     private bool rightWasPressed = false;
-    private int[] leftERMs = {1,2};
-    private int[] rightERMs = {3,4};
+    private int[] leftERMs = {1,3};
+    private int[] rightERMs = {2,4};
 
     [Header("Vibration Parameters")]
     public float frequency = 80f;
