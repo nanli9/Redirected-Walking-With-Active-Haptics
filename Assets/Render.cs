@@ -145,64 +145,12 @@ public class Render : MonoBehaviour
     private List<Vector3> position;
     private List<float> time;
 
-    private void OnValidate()
-    {
-        // Called anytime the dropdown changes in the Inspector
-        HandleConditionChange(selectedCondition);
-    }
+        // --- Head velocity tracking ---
+    public Vector3 filteredVelocity;
 
-    private void HandleConditionChange(ConditionType condition)
-    {
-        Debug.Log("Selected Condition: " + condition);
+    [Range(0f, 1f)]
+    public float velocityAlpha = 0.5f; // 'a' in v_new = a*v_now + (1-a)*v_old
 
-        switch (condition)
-        {
-            case ConditionType.LC:
-                Debug.Log("LC selected");
-                break;
-
-            case ConditionType.LV:
-                Debug.Log("LV selected");
-                break;
-
-            case ConditionType.RC:
-                Debug.Log("RC selected");
-                break;
-
-            case ConditionType.RV:
-                Debug.Log("RV selected");
-                break;
-
-            case ConditionType.BLC:
-                Debug.Log("BLC selected");
-                break;
-
-            case ConditionType.BRC:
-                Debug.Log("BRC selected");
-                break;
-
-            case ConditionType.BLV:
-                Debug.Log("BLV selected");
-                break;
-
-            case ConditionType.BRV:
-                Debug.Log("BRV selected");
-                break;
-
-            case ConditionType.NR:
-                Debug.Log("VR selected");
-                break;
-
-            case ConditionType.NL:
-                Debug.Log("VL selected");
-                break;
-
-            default:
-                Debug.LogWarning("Unknown condition selected");
-                break;
-        }
-
-    }
     private void IncreaseCurvatureGain()
     {
         curvatureGain += staircaseStep;
@@ -335,68 +283,6 @@ public class Render : MonoBehaviour
 
         Debug.Log($"[Calibrate] Rotated scene by {angle:F2} degrees to align virtual path with real path.");
     }
-    /**
-      *  Start is called before the first frame update
-      */
-    void Awake()
-    {
-        /*
-        // Create Cases
-        Cases = new List<Tuple<float, bool>>();
-        var Temp = new List<Tuple<float, bool>>();
-        var Temp1 = new List<Tuple<float, bool>>();
-        var Temp2 = new List<Tuple<float, bool>>();
-        n_radius = 0;
-        // bool FirstCondition = (UnityEngine.Random.value > 0.5f);
-        bool FirstCondition = true;
-        foreach (var radius in _r)
-        {
-            // randomlly choose bool value
-            Cases.Add(new Tuple<float, bool>(radius, FirstCondition));
-            Temp.Add(new Tuple<float, bool>(-radius, FirstCondition));
-            Temp1.Add(new Tuple<float, bool>(radius, !FirstCondition));
-            Temp2.Add(new Tuple<float, bool>(-radius, !FirstCondition));
-            n_radius += 2;
-        }
-        // Shuffle Cases
-        Cases.Shuffle();
-        Temp.Shuffle();
-        Temp1.Shuffle();
-        Temp2.Shuffle();
-        Cases.AddRange(Temp);
-        Cases.AddRange(Temp1);
-        Cases.AddRange(Temp2);
-        // Init UDP
-        udpClient = new UdpClient(localPort);
-        remoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIpAddress), remotePort);
-        Debug.Log("UDP Client started");
-
-        participant_id = DateTime.Now.ToString("ddHHmm");
-
-        cases_writer = new StreamWriter(Application.persistentDataPath + "/CaseOrder.csv", true, new UTF8Encoding());
-        if (new FileInfo(Application.persistentDataPath + "/CaseOrder.csv").Length == 0)
-        {
-            cases_writer.WriteLine("Participant ID, Radius, Condition");
-        }
-        foreach (var c in Cases)
-        {
-            cases_writer.WriteLine(participant_id + "," + c.Item1 + "," + c.Item2);
-        }
-        cases_writer.Flush();
-        cases_writer.Close();
-
-        straightness_response_writer = new StreamWriter(Application.persistentDataPath + "/StraightnessResponse.csv", true, new UTF8Encoding());
-        if (new FileInfo(Application.persistentDataPath + "/StraightnessResponse.csv").Length == 0)
-        {
-            straightness_response_writer.WriteLine("Participant ID, Radius, Condition, Straightness");
-        }
-        position_writer = new StreamWriter(Application.persistentDataPath + "/Position.csv", true, new UTF8Encoding());
-        if (new FileInfo(Application.persistentDataPath + "/Position.csv").Length == 0)
-        {
-            position_writer.WriteLine("Participant ID, Radius, Condition, Position, Time");
-        }
-        */
-    }
 
     void Start()
     {
@@ -431,6 +317,8 @@ public class Render : MonoBehaviour
 
         VisionRendering();
         CalibrateVirtualPathToReal();
+
+        filteredVelocity = Vector3.zero;
     }
 
     // Update is called once per frame
@@ -457,7 +345,9 @@ public class Render : MonoBehaviour
         SL.SetActive(true);
         EL.SetActive(true);
         TestingObjectsViewUpdate();
-      
+        
+        UpdateHeadVelocity();
+
         // Rendering Algorithm Update
         VisionRendering();
         /*
@@ -474,6 +364,15 @@ public class Render : MonoBehaviour
         }
         */
 
+    }
+
+    private void UpdateHeadVelocity()
+    {
+        Vector3 rawVelocity = OVRManager.display.velocity;
+
+        // Exponential smoothing:
+        // v_new = a * v_now + (1 - a) * v_old
+        filteredVelocity = velocityAlpha * rawVelocity + (1f - velocityAlpha) * filteredVelocity;
     }
 
     void VisionRendering()
