@@ -43,7 +43,7 @@ public class Render : MonoBehaviour
     [Header("Condition Cases")]
     public ConditionType selectedCondition;   // <-- dropdown in Inspector
     public float staircaseStep;
-    private float curvatureGain;
+    public float curvatureGain;
     public int UserNumber;
     private int trialNumber;
     private bool lastIncrease;
@@ -178,6 +178,8 @@ public class Render : MonoBehaviour
         }
         curvatureGain -= staircaseStep;
         curvatureGain = Mathf.Max(0.0f, curvatureGain);
+        if (Mathf.Abs(curvatureGain) < 1e-5f)
+            curvatureGain = 0f;
         changeRadius();
     }
     private void changeRadius()
@@ -521,6 +523,7 @@ public class Render : MonoBehaviour
     }
     void OnApplicationQuit()
     {
-
+        curvatureGain_writer.Close();
+        acm.amplitude = 0; 
     }
 }
