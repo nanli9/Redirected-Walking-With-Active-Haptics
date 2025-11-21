@@ -33,6 +33,7 @@ public static class IListExtensions
 public class Render : MonoBehaviour
 {
     //user study
+    public ArduinoControlManager acm;
     public enum ConditionType
     {
         LC, LV, RC, RV,
@@ -45,8 +46,15 @@ public class Render : MonoBehaviour
     private float curvatureGain;
     public int UserNumber;
     private int trialNumber;
-    [SerializeField]
-    private Vector3 cameraOffset = new Vector3(2.5f, 0f, 0f); // Set this in Inspector
+    private bool lastIncrease;
+    private float minSpeed = 0.05f;   // below this = “not really moving” / noise
+    private float maxSpeed = 1.5f;   // normal brisk walk, you can tweak to 1.8f if needed
+    private float minVibrationAmplitude = 0f;
+    private float maxVibrationAmplitude = 180.0f;
+    private bool variationBySpeed;
+    private Vector3 lastPos;
+    private Vector3 cameraOffset = new Vector3(0f, 0f, 0f);
+    private float averageSpeed;
     /// <summary> User(OVRCameraRig.CenterEyeAnchor) </summary>
     public OVRCameraRig U;
     /// <summary> Actual Hand </summary>
@@ -153,22 +161,31 @@ public class Render : MonoBehaviour
 
     private void IncreaseCurvatureGain()
     {
+        if(!lastIncrease)
+        {
+            staircaseStep = Mathf.Max(staircaseStep/2,0.00625f);
+            lastIncrease = !lastIncrease;
+        }
         curvatureGain += staircaseStep;
         changeRadius();
-        staircaseStep /= 2;
     }
     private void DecreaseCurvatureGain()
     {
+        if(lastIncrease)
+        {
+            staircaseStep = Mathf.Max(staircaseStep/2,0.00625f);
+            lastIncrease = !lastIncrease;
+        }
         curvatureGain -= staircaseStep;
+        curvatureGain = Mathf.Max(0.0f, curvatureGain);
         changeRadius();
-        staircaseStep /= 2;
     }
     private void changeRadius()
     {
         trialNumber++;
         if (Mathf.Approximately(curvatureGain, 0f))
         {
-            r = STRAIGHT;                  // your "infinite" straight radius
+            r = sign * STRAIGHT;                  // your "infinite" straight radius
         }
         else
         {
@@ -201,8 +218,10 @@ public class Render : MonoBehaviour
         VisionRendering();
         CalibrateVirtualPathToReal();
 
-        curvatureGain_writer.WriteLine(UserNumber + ", "+ trialNumber + "," + selectedCondition.ToString() + ", " + curvatureGain);
+        curvatureGain_writer.WriteLine(UserNumber + ", "+ trialNumber + "," + selectedCondition.ToString() + ", " + sign * curvatureGain + ", " + averageSpeed);
         curvatureGain_writer.Flush();
+
+        averageSpeed = 0;
     }
     /**
       *  Testing Objects Display Status Update
@@ -289,13 +308,15 @@ public class Render : MonoBehaviour
         // Init Variables
         //Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
         Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
-        sign = selectedCondition.ToString().Contains("L") ? -1 : 1;
+        sign = selectedCondition.ToString().Contains("L") ? 1 : -1;
+        variationBySpeed = selectedCondition.ToString().Contains("V") ? true : false;
 
         curvatureGain = 0.0f;
         //right is positive after press the space key
         r = sign * STRAIGHT;
         //DirectionInstructionWindow.SetActive(true);
         trialNumber = 0;
+        lastIncrease = true;
 
         // Debug.Log($"Radius: {r}, On/Off: {WithServo}, Cases Left: {Cases.Count}");
         HW.transform.localScale = new Vector3(r * 2, h, r * 2);
@@ -313,17 +334,21 @@ public class Render : MonoBehaviour
         string fullPath = Path.Combine(Application.persistentDataPath, filename);
         curvatureGain_writer = new StreamWriter(fullPath, true, new UTF8Encoding());
         if (new FileInfo(fullPath).Length == 0)
-            curvatureGain_writer.WriteLine("UserNo, TrialNo, Condition, curvatureGain");
+            curvatureGain_writer.WriteLine("UserNo, TrialNo, Condition, curvatureGain, average velocity");
 
         VisionRendering();
         CalibrateVirtualPathToReal();
 
         filteredVelocity = Vector3.zero;
+        lastPos = Vector3.zero;
+
+        averageSpeed = 0;
     }
 
     // Update is called once per frame
     void Update()
     {
+       
         if (Input.GetKeyDown(KeyCode.Space))
         {
             //CalibrateVirtualPathToReal();
@@ -350,6 +375,7 @@ public class Render : MonoBehaviour
 
         // Rendering Algorithm Update
         VisionRendering();
+
         /*
         if (td > p && td - p < 0.1f)
         {
@@ -368,11 +394,31 @@ public class Render : MonoBehaviour
 
     private void UpdateHeadVelocity()
     {
-        Vector3 rawVelocity = OVRManager.display.velocity;
+        Vector3 currentPos = U.centerEyeAnchor.transform.position;
 
+        Vector3 rawVelocity = (currentPos - lastPos) / Time.deltaTime;
+        
         // Exponential smoothing:
         // v_new = a * v_now + (1 - a) * v_old
         filteredVelocity = velocityAlpha * rawVelocity + (1f - velocityAlpha) * filteredVelocity;
+        averageSpeed = Mathf.Max(averageSpeed,filteredVelocity.magnitude);
+        if(variationBySpeed)
+        {
+            float t = Mathf.InverseLerp(minSpeed, maxSpeed, filteredVelocity.magnitude);  // clamps automatically
+
+            t = Mathf.Min(1.0f,t);
+
+            // 4) Map to vibration intensity [0, 120]
+            float vibrationIntensity = Mathf.Lerp(minVibrationAmplitude, maxVibrationAmplitude, t);
+
+            // If your Arduino expects an int:
+            int vibrationIntensityInt = Mathf.RoundToInt(vibrationIntensity);
+
+            // Example: send to ArduinoControlManager
+            acm.amplitude = vibrationIntensityInt; 
+        }
+
+        lastPos = currentPos;
     }
 
     void VisionRendering()
@@ -440,7 +486,7 @@ public class Render : MonoBehaviour
 
         // 3) Place SL/EL in WORLD space using **consistent forward sign**
         Vector3 SL_world = P + r_d * V_vec.normalized * d + S_vec;
-        Vector3 EL_world = SL_world + (/* choose sign */ +1f) * T_hat * p * 5.0f; // use +T_hat for “ahead”
+        Vector3 EL_world = SL_world + (/* choose sign */ +1f) * T_hat * p * 1.0f; // use +T_hat for “ahead”
 
         // Optional lift
         SL_world += Vector3.up * 0.5f;
@@ -471,6 +517,10 @@ public class Render : MonoBehaviour
             AS.transform.position = AH.PointerPose.position;
             VS.transform.position = AH.PointerPose.position - Vector3.Dot(AP_vec, V_vec.normalized) * V_vec.normalized;
         }
+
+    }
+    void OnApplicationQuit()
+    {
 
     }
 }

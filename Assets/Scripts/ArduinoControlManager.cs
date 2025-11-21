@@ -9,8 +9,8 @@ public class ArduinoControlManager : MonoBehaviour
     public bool isRight = true;   
     private bool leftWasPressed = false;
     private bool rightWasPressed = false;
-    private int[] leftERMs = {1,3};
-    private int[] rightERMs = {2,4};
+    private int[] leftERMs = {2,4};
+    private int[] rightERMs = {1,3};
 
     [Header("Vibration Parameters")]
     public float frequency = 80f;
@@ -23,6 +23,7 @@ public class ArduinoControlManager : MonoBehaviour
 
     private bool isVibrating = false;
     private bool wasVibrating = false;
+    private float lastAmplitudeSent = -1f;
 
     void Update()
     {
@@ -37,7 +38,7 @@ public class ArduinoControlManager : MonoBehaviour
                 InputDevice rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
                 if (rightHand.TryGetFeatureValue(CommonUsages.primaryButton, out bool rightPressed))
                 {
-                    if (rightPressed && !rightWasPressed)
+                    if ((rightPressed && !rightWasPressed))
                     {
                         isRight = !isRight;
                         Debug.Log($"Right flag toggled: {isRight}");
@@ -62,6 +63,29 @@ public class ArduinoControlManager : MonoBehaviour
                 }
 
                 wasVibrating = isVibrating;
+
+                if (isVibrating)
+                {
+                    float ampDelta = Mathf.Abs(amplitude - lastAmplitudeSent);
+                    if (ampDelta >= amplitudeChangeThreshold)
+                    {
+                        Debug.Log($"Amplitude changed ({lastAmplitudeSent} -> {amplitude}), updating Arduino");
+
+                        if (isLeft)
+                        {
+                            foreach (int id in leftERMs)
+                                SendToArduino(id, frequency, amplitude);
+                        }
+                        if (isRight)
+                        {
+                            foreach (int id in rightERMs)
+                                SendToArduino(id, frequency, amplitude);
+                        }
+
+                        lastAmplitudeSent = amplitude;
+                    }
+                }
+
             }
         }
     }
