@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 1307933605}
-  m_IndirectSpecularColor: {r: 0.1887176, g: 0.20977312, b: 0.18172741, a: 1}
+  m_IndirectSpecularColor: {r: 0.18871768, g: 0.20977277, b: 0.18172762, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -40971,9 +40971,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   acm: {fileID: 617287102}
-  selectedCondition: 2
-  staircaseStep: 0
-  UserNumber: 0
+  selectedCondition: 0
+  staircaseStep: 0.2
+  curvatureGain: 0
+  UserNumber: 1
   U: {fileID: 7079690333082418969}
   AH: {fileID: 2168916185411584164}
   RH: {fileID: 2621798409574946076}

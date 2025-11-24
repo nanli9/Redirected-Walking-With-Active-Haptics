@@ -36,7 +36,7 @@ public class Render : MonoBehaviour
     public ArduinoControlManager acm;
     public enum ConditionType
     {
-        LC, LV, RC, RV,
+        LLC, LLV, LRC, LRV, RRV, RRC, RLV, RLC,
         BLC, BRC, BLV, BRV,
         NR, NL
     }
@@ -47,7 +47,7 @@ public class Render : MonoBehaviour
     public int UserNumber;
     private int trialNumber;
     private bool lastIncrease;
-    private float minSpeed = 0.05f;   // below this = “not really moving” / noise
+    private float minSpeed = 0.05f;   // below this = “not really moving?/ noise
     private float maxSpeed = 1.5f;   // normal brisk walk, you can tweak to 1.8f if needed
     private float minVibrationAmplitude = 0f;
     private float maxVibrationAmplitude = 180.0f;
@@ -310,8 +310,18 @@ public class Render : MonoBehaviour
         // Init Variables
         //Debug.Log("Persistent Data Path: " + Application.persistentDataPath);
         Debug.Log("U Pos" + U.centerEyeAnchor.transform.position);
-        sign = selectedCondition.ToString().Contains("L") ? 1 : -1;
-        variationBySpeed = selectedCondition.ToString().Contains("V") ? true : false;
+        //sign = selectedCondition.ToString().Contains("L") ? 1 : -1;
+        if (selectedCondition.ToString()[1] == 'L')
+        {
+            sign = -1;
+        }
+        else
+        {
+            sign = 1;
+        }
+
+
+            variationBySpeed = selectedCondition.ToString().Contains("V") ? true : false;
 
         curvatureGain = 0.0f;
         //right is positive after press the space key
@@ -488,7 +498,7 @@ public class Render : MonoBehaviour
 
         // 3) Place SL/EL in WORLD space using **consistent forward sign**
         Vector3 SL_world = P + r_d * V_vec.normalized * d + S_vec;
-        Vector3 EL_world = SL_world + (/* choose sign */ +1f) * T_hat * p * 1.0f; // use +T_hat for “ahead”
+        Vector3 EL_world = SL_world + (/* choose sign */ +1f) * T_hat * p * 1.0f; // use +T_hat for “ahead?
 
         // Optional lift
         SL_world += Vector3.up * 0.5f;
